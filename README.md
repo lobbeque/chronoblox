@@ -4,6 +4,4 @@ A chronophotographic system for visualizing the temporal evolution of real world
 
 ## Resources
 
-### Examples
-
-* [Toy model (SBM)](index.html)
+* [examples](https://lobbeque.github.io/chronoblox_examples/)
