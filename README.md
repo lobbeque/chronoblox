@@ -6,4 +6,4 @@ A chronophotographic system for visualizing the temporal evolution of real world
 
 ### Examples
 
-* [Toy model (SBM)](examples/toy_model_sbm.html)
+* [Toy model (SBM)](index.html)
