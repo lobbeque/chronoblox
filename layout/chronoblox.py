@@ -35,7 +35,7 @@ parser.add_argument('--snapshots'
 				   , default='board_directors', help='path to the snapshots (default: load the board_directors data set)')
 parser.add_argument('--scope'
 	               , type=int, nargs=1
-	               , default=1, help='limit the temporal scope of the Jaccard index')
+	               , default=1, help='limit the temporal scope of the Jaccard index; unlimited scope is -1')
 parser.add_argument('--threshold'
 	               , type=float, nargs=1
 	               , default=0.1, help='filter the inter-temporal edges')
@@ -387,7 +387,10 @@ for block in sequence_of_blocks.keys() :
 def areInScope(bi_t,bj_t) :
 	bi_t_idx = phases.index(bi_t)
 	bj_t_idx = phases.index(bj_t)
-	return (abs(bi_t_idx - bj_t_idx) <= args.scope)
+	if (args.scope < 0) :
+		return True
+	else :
+		return (abs(bi_t_idx - bj_t_idx) <= args.scope)
 
 print('\nembed the sequence of meta-graphs')
 
