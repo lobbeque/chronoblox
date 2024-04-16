@@ -8,6 +8,8 @@ Since this project is still in development, this document remains in progress.
 
 **Prerequisites** : You first need to install [conda](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) and [graph-tool](https://graph-tool.skewed.de/)
 
+**Other dependencies** : [gensim](https://pypi.org/project/gensim/) | [numpy](https://pypi.org/project/numpy/) | [pacmap](https://pypi.org/project/pacmap/) | [pecanpy](https://pypi.org/project/pecanpy/) | [scikit-learn](https://pypi.org/project/scikit-learn/)
+
 ## Resources
 
 * [examples](https://lobbeque.github.io/chronoblox_examples/)
