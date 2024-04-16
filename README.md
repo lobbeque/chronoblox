@@ -14,7 +14,7 @@ Since this project is still in development, this document remains in progress.
 
 ### Launch the script
 
-#### With no snapshots
+#### With no graph snapshot
 
 ```shell
 cd ./layout
@@ -24,26 +24,24 @@ python3 chronoblox.py
 
 If you don't have your own snapshots, then by default Chronoblox will use the [board_directors](https://networks.skewed.de/net/board_directors) data set.
 
-### Run the script 
+#### With your own graph snapshots
 
-If you have installed graph-tool using [conda](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) then first run `conda activate gt`.  
-Then simply run `python3 chronoblox.py`.
-If you don't specify the path to your own snapshots in argument such as `python3 chronoblox.py --snapshots ./path_to_your_snapshots.gt` then chronoblox will visualize the [board_directors](https://networks.skewed.de/net/board_directors) data set by default.
+```shell
+cd ./layout
+conda activate gt
+python3 chronoblox.py --snapshots ~/path/to/your/snapshots*
+```
 
-### Snapshots' requirements
+#### Graph snapshots' requirements
 
-Chronoblox takes a sequence of graph snapshots as input data. Graphs must be in graph-tool `.gt` format. The graphs must contain the following [graph properties](https://graph-tool.skewed.de/static/doc/autosummary/graph_tool.PropertyMap.html#graph_tool.PropertyMap) :
+Chronoblox takes a sequence of graph snapshots as input data. Graph snapshots must be in graph-tool `.gt` format. The graphs must contain the following [graph properties](https://graph-tool.skewed.de/static/doc/autosummary/graph_tool.PropertyMap.html#graph_tool.PropertyMap) and vertex properties:
 
-* _phase_ : a string that indicates the order of the graph in the sequence, graphs will be ordered by _phase_
-* _name_ : a string that indicates the name of the sequence
-
-The vertices must contain the following vertex properties :
-
-* _vid_ : a unique string identifier for each vertex whatever the phase.
-
-The vertices can contain the following vertex properties :
-
-* _vmeta_ : a metadata or a label attached to the vertices, the metadata will be projected on the chronophotographies in the interface
+* Graph properties
+  * `phase` : a string that indicates the order of the  graph snapshots in the sequence. It can be a date or an Ord number. Graph snapshots will be sorted by `phase` during the embedding and visualization steps.
+  * `name` : a that indicates the name of the sequence. It will be used to name the output files.
+* Vertex properties
+  * `vid` : a unique string identifier for each vertex whatever the phase.
+  * `vmeta` : a qualitative metadata or a label attached to each vertex. Metadata will be used to highlight the node groups in the interface. If not completed the default will be _NA_.
 
 ### Other arguments
 
