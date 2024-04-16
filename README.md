@@ -1,6 +1,12 @@
 # Chronoblox: Chronophotographic Sequential Graph Visualization
 
-Chronoblox performs the chronophotography of a sequence of graphs. By using a single inter-temporal embedding space, Chronoblox lays out each snapshot in relation with the ones that precede or follow it. The motion of the whole sequence of graphs can thus be interpreted in terms micro to meso-structural evolution.
+![Layout](https://img.shields.io/badge/Layout-Python-informational?style=flat&logo=python&color=6144b3)&nbsp;&nbsp;![Interface](https://img.shields.io/badge/Interface-Javascript-informational?style=flat&logo=javascript&color=6144b3)&nbsp;&nbsp;
+
+Since this project is still in development, this document remains in progress.
+
+**Ressources** : [examples](https://lobbeque.github.io/chronoblox_examples/) | publication
+
+**Prerequisites** : You first need to install [conda](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) and [graph-tool](https://graph-tool.skewed.de/)
 
 ## Resources
 
