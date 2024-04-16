@@ -1,4 +1,4 @@
-<div><img src="https://github.com/lobbeque/chronoblox/blob/master/images/pole_vault.jpg"></div>
+<div><img width="300" src="https://github.com/lobbeque/chronoblox/blob/master/images/pole_vault.jpg"></div>
 
 # Chronoblox: Chronophotographic Sequential Graph Visualization
 
