@@ -1,3 +1,5 @@
+<div><img src="https://github.com/lobbeque/chronoblox/blob/master/images/pole_vault.svg"></div>
+
 # Chronoblox: Chronophotographic Sequential Graph Visualization
 
 ![Layout](https://img.shields.io/badge/Layout-Python-informational?style=flat&logo=python&color=6144b3)&nbsp;&nbsp;![Interface](https://img.shields.io/badge/Interface-Javascript-informational?style=flat&logo=javascript&color=6144b3)&nbsp;&nbsp;
