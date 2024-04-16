@@ -1,4 +1,4 @@
-# Chronoblox
+# Chronoblox: Chronophotographic Sequential Graph Visualization
 
 Chronoblox performs the chronophotography of a sequence of graphs. By using a single inter-temporal embedding space, Chronoblox lays out each snapshot in relation with the ones that precede or follow it. The motion of the whole sequence of graphs can thus be interpreted in terms micro to meso-structural evolution.
 
