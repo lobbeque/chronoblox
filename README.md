@@ -6,24 +6,23 @@ Since this project is still in development, this document remains in progress.
 
 **Ressources** : [examples](https://lobbeque.github.io/chronoblox_examples/) | publication
 
+## Chronoblox Layout
+
 **Prerequisites** : You first need to install [conda](https://conda.io/projects/conda/en/latest/user-guide/getting-started.html) and [graph-tool](https://graph-tool.skewed.de/)
 
 **Other dependencies** : [gensim](https://pypi.org/project/gensim/) | [numpy](https://pypi.org/project/numpy/) | [pacmap](https://pypi.org/project/pacmap/) | [pecanpy](https://pypi.org/project/pecanpy/) | [scikit-learn](https://pypi.org/project/scikit-learn/)
 
-## Resources
+### Launch the script
 
-* [examples](https://lobbeque.github.io/chronoblox_examples/)
+#### With no snapshots
 
-## Layout
+```shell
+cd ./layout
+conda activate gt
+python3 chronoblox.py
+```
 
-### Python dependencies
-
-* [graph-tool](https://graph-tool.skewed.de/)
-* [numpy](https://numpy.org/)
-* [pacmap](https://github.com/YingfanWang/PaCMAP)
-* [pecanpy](https://github.com/krishnanlab/PecanPy)
-* [gensim.models](https://radimrehurek.com/gensim/models/word2vec.html)
-* [sklearn.decomposition](https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html)
+If you don't have your own snapshots, then by default Chronoblox will use the [board_directors](https://networks.skewed.de/net/board_directors) data set.
 
 ### Run the script 
 
