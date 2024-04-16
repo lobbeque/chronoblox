@@ -2,6 +2,8 @@
 
 ![Layout](https://img.shields.io/badge/Layout-Python-informational?style=flat&logo=python&color=6144b3)&nbsp;&nbsp;![Interface](https://img.shields.io/badge/Interface-Javascript-informational?style=flat&logo=javascript&color=6144b3)&nbsp;&nbsp;
 
+Chronoblox performs the chronophotography of a sequence of graph snapshots by fitting them into a single embedding space common to all time periods.Chronoblox is dynamic graph drawing layout that comes with a visualization interface.
+
 Since this project is still in development, this document remains in progress.
 
 **Ressources** : [examples](https://lobbeque.github.io/chronoblox_examples/) | publication
@@ -43,10 +45,10 @@ Chronoblox takes a sequence of graph snapshots as input data. Graph snapshots mu
   * `vid` : a unique string identifier for each vertex whatever the phase.
   * `vmeta` : a qualitative metadata or a label attached to each vertex. Metadata will be used to highlight the node groups in the interface. If not completed the default will be _NA_.
 
-### Other arguments
+#### Other arguments
 
-* _--threshold_ : a float used to filter the inter-temporal edges before the embedding (default = 0.1)
-* _--scope_ : an int used to limit the temporal scope of the jaccard index while building the inter-temporal similarity matrix. By limiting the scope you will make Chronoblox more sensitive to local changes (default = 1; unlimited_scope = -1)
+* `--threshold` : a float used to filter pointless inter-temporal edges before the embedding (default = 0.1)
+* `--scope` : an int used to limit the inter-temporal scope of the jaccard index while building the inter-temporal similarity matrix. By limiting the scope you will make Chronoblox more sensitive to local changes (default = 1; unlimited_scope = -1)
 
 ### Output files
 
@@ -57,6 +59,6 @@ Chronoblox layout produces two files :
 
 ### Note
 
-This version of Chronoblox only implements a [stochastic block model approach](https://graph-tool.skewed.de/static/doc/demos/inference/inference.html) in order to infer the node groups.
+This version of Chronoblox only implements a [stochastic block model](https://graph-tool.skewed.de/static/doc/demos/inference/inference.html) approach in order to infer the node groups. Futur version will include a label-based grouping strategy and the louvain algorithm.
 
 
