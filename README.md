@@ -63,4 +63,10 @@ Chronoblox layout produces two files :
 
 This version of Chronoblox only implements a [stochastic block model](https://graph-tool.skewed.de/static/doc/demos/inference/inference.html) approach in order to infer the node groups. Futur version will include a label-based grouping strategy and the louvain algorithm.
 
+## Chronoblox Interface
+
+**Dependencies** : [p5.js](https://p5js.org/) | [d3.js](https://d3js.org/) | [fontawesome](https://fontawesome.com/)
+
+
+
 
