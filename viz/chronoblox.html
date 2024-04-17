@@ -213,8 +213,8 @@
     let clickedNode = ''; 
 
     // raw data elements
-    let coordinates_2D, coordinates_1D, nodes, edges;
-    let periods = [], periods_str = []; periods_and_periods_str = {}
+    let nodes, edges;
+    let periods = [];
 
     // canvas elements
     let w = document.getElementById("p5canvas").offsetWidth,
@@ -222,7 +222,7 @@
 
     function sumFlowByPeriod() {
       let flowByPeriod = periods.map((period) => {
-        let blocks = coordinates_2D.findRows(period, 'period_int'); 
+        let blocks = nodes.findRows(period,'phase'); 
         let sum = blocks.reduce((acc,b) => {
           return acc + parseInt((nodes.findRow(b.get('id'),'id')).get('size'))
         },0)
@@ -274,30 +274,15 @@
       return neighbours      
     } 
 
-    function getPreviousPeriod(prd,str) {
+    function getNextPeriod(prd) {
       let idx = periods.indexOf(prd)
-      let previous_prd = periods[idx - 1]
-      if (!str) {
-        return previous_prd
-      } else {
-        return periods_and_periods_str[previous_prd]
-      }
+      return periods[idx + 1]
     }
 
-    function getNextPeriod(prd,str) {
-      let idx = periods.indexOf(prd)
-      let next_prd = periods[idx + 1]
-      if (!str) {
-        return next_prd
-      } else {
-        return periods_and_periods_str[next_prd]
-      }
-    } 
-
     function setupReadingDirection() {
-      let xs_fst = coordinates_2D.findRows(periods[0],'period_int').map((block) => parseFloat(block.get('x')));
-      let xs_lst = coordinates_2D.findRows(periods[periods.length-1],'period_int').map((block) => parseFloat(block.get('x')));
-      if (min(xs_fst) < max(xs_lst)) {
+      let xs_fst = nodes.findRows(periods[0],'phase').map((block) => parseFloat(block.get('x')));
+      let xs_lst = nodes.findRows(periods[periods.length-1],'phase').map((block) => parseFloat(block.get('x')));      
+      if ((min(xs_fst) < max(xs_lst)) && (max(xs_fst) < max(xs_lst))) {
         fromLeftToRight = true
       } else {
         fromLeftToRight = false
@@ -315,11 +300,9 @@
     } 
 
     function preload() {
-      coordinates_2D = loadTable('../../output_data/retweets-impact-investing-time_slice_12-time_overlap_12filtered-inter_temporal_overlap-2D_pacmap.csv','csv','header')
-      coordinates_1D = loadTable('../../output_data/retweets-impact-investing-time_slice_12-time_overlap_12filtered-inter_temporal_overlap-1D_pacmap.csv','csv','header')
       
-      nodes = loadTable('../../output_data/retweets-impact-investing-time_slice_12-time_overlap_12filtered-nodes.csv','csv','header')
-      edges = loadTable('../../output_data/retweets-impact-investing-time_slice_12-time_overlap_12filtered-edges.csv','csv','header')
+      nodes = loadTable('../layout/board_directors_blocks.csv','csv','header')
+      edges = loadTable('../layout/board_directors_edges.csv','csv','header')
       
       neuekabel = loadFont('fonts/NeueKabel.otf');
       neuekabelbold = loadFont('fonts/NeueKabel-Bold.otf');
@@ -338,9 +321,9 @@
       midCanvas = createGraphics(w,h/5 - h/6)
       chronoCanvas = [createGraphics(w,h - h/5),createGraphics(w,h - h/5)]
 
-      xLimitsChrono = getLimits('x',coordinates_2D)
-      yLimitsChrono = getLimits('y',coordinates_2D)
-      yLimitsFlow   = getLimits('y',coordinates_1D)      
+      xLimitsChrono = getLimits('x',nodes)
+      yLimitsChrono = getLimits('y',nodes)
+      yLimitsFlow   = getLimits('z',nodes)      
 
       // raw data to edges / nodes data
 
@@ -353,15 +336,9 @@
 
       // periods
 
-      periods = coordinates_2D.getColumn('period_int')
+      periods = nodes.getColumn('phase')
       periods = Array.from(new Set(periods))
-      periods.sort(function (a,b) {return a-b;})
-
-      periods.forEach((period) => {
-        let row = coordinates_2D.findRow(period,'period_int');
-        periods_str.push(row.get('period_str'))
-        periods_and_periods_str[period] = row.get('period_str')
-      })
+      periods.sort()
 
       setupReadingDirection()
 
@@ -390,19 +367,17 @@
 
       periods.forEach((period) => {
         
-        let blocks_1D = coordinates_1D.findRows(period, 'period_int'); 
-        let blocks_2D = coordinates_2D.findRows(period, 'period_int'); 
-        let diac_edges = raw_diac_edges.filter((row) => period == parseInt(row.get('period_int')));
-        let sync_edges = raw_sync_edges.filter((row) => period == parseInt(row.get('period_int')));
+        let blocks = nodes.findRows(period, 'phase'); 
+        let diac_edges = raw_diac_edges.filter((row) => period == row.get('phase'));
+        let sync_edges = raw_sync_edges.filter((row) => period == row.get('phase'));
       
         // setup the chrono chart sync_edges
         sync_edges.sort(function (e1,e2) {return parseInt(e1.get('weight')) - parseInt(e2.get('weight'));})
         sync_edges.forEach((edge) => {
-          console.log(edge.get('source') + '_' + edge.get('period_str'))
-          let s = (coordinates_2D.findRows(period, 'period_int'))
-                    .find((row) => row.get('id') == edge.get('source') + '_' + edge.get('period_str'))
-          let t = (coordinates_2D.findRows(period, 'period_int'))
-                    .find((row) => row.get('id') == edge.get('target') + '_' + edge.get('period_str'))
+          let s = (nodes.findRows(period, 'phase'))
+                    .find((row) => row.get('id') == edge.get('source'))
+          let t = (nodes.findRows(period, 'phase'))
+                    .find((row) => row.get('id') == edge.get('target'))
           let weight = parseInt(edge.get('weight'));
           if (s != undefined && t != undefined && s != t && weight > 0) { 
             chronoSyncEdges.push(new chronoSyncEdge(period
@@ -415,9 +390,8 @@
         // setup the chrono chart diac_edges
         diac_edges.sort(function (e1,e2) {return parseInt(e2.get('weight')) - parseInt(e1.get('weight'));})
         diac_edges.forEach((edge) => {
-          let source_period = getPreviousPeriod(period,true)
-          let s = coordinates_2D.findRow(edge.get('source') + '_' + source_period,'id')
-          let t = coordinates_2D.findRow(edge.get('target') + '_' + periods_and_periods_str[period],'id') 
+          let s = nodes.findRow(edge.get('source'),'id')
+          let t = nodes.findRow(edge.get('target'),'id') 
           if (s != undefined && t != undefined && s != t) {
             let tale = parseInt(edge.get('sync_component'))
             let diac_edge = new taleEdge(toXScreen(parseFloat(s.get('x')))
@@ -436,21 +410,20 @@
         })
 
 
-        let blocks_ys = blocks_1D.map((b) => yFlowScale(parseFloat(b.get('y'))))
+        let blocks_zs = blocks.map((b) => yFlowScale(parseFloat(b.get('z'))))
         let node_x = xFlowScale(period)
         let blocks_lineage = 0
         let blocks_vectors = {}
 
         // setup the chrononodes
-        blocks_2D.forEach((block) => {
+        blocks.forEach((block) => {
           let x_screen = toXScreen(parseFloat(block.get('x')));
           let y_screen = toYScreen(parseFloat(block.get('y')));
-          let node_id = period.toString() + '_' + block.get('id')
-          let node = nodes.findRow(block.get('id'),'id')
-          let node_weight = parseInt(node.get('size'));
-          let node_meta = node.get('meta')
-          let tale = parseInt(node.get('diac_component'));
-          chronoNodes[block.get('id')] = new chronoNode(node_id,block.get('id'),x_screen,y_screen,node_weight,tale,node_meta)
+          let node_id = block.get('id')
+          let node_weight = parseInt(block.get('size'));
+          let node_meta = block.get('meta')
+          let tale = parseInt(block.get('diac_component'));
+          chronoNodes[node_id] = new chronoNode(node_id,x_screen,y_screen,node_weight,tale,node_meta)
 
           // for drawing the tales
 
@@ -463,7 +436,7 @@
 
           // for drawing the canopy hull
 
-          let node_hull = parseInt(node.get('sync_component'));
+          let node_hull = parseInt(block.get('sync_component'));
           let node_vector = createVector(toXScreen(parseFloat(block.get('x'))),toYScreen(parseFloat(block.get('y'))));
           if (blocks_vectors[node_hull] !== undefined) {
             blocks_vectors[node_hull].push(node_vector)
@@ -473,26 +446,23 @@
         })        
 
         // setup the flow chart nodes
-        blocks_1D.forEach((block) => {
-          let node = nodes.findRow(block.get('id'),'id')
-          blocks_lineage += Math.round(node.get('lineage_size'))
-          let node_size = parseInt(node.get('size'));
-          let tale = parseInt(node.get('diac_component'));
-          let node_id = period.toString() + '_' + block.get('id')
-          let node_y = yFlowScale(parseFloat(block.get('y')))
-          flowNodes.push(new flowNode(node_id,node_x,node_y,nodesScale(node_size),tale,talesColorScale((tale % 12))))
+        blocks.forEach((block) => {
+          blocks_lineage += Math.round(block.get('lineage_size'))
+          let node_size = parseInt(block.get('size'));
+          let tale = parseInt(block.get('diac_component'));
+          let node_y = yFlowScale(parseFloat(block.get('z')))
+          flowNodes.push(new flowNode(block.get('id'),node_x,node_y,nodesScale(node_size),tale,talesColorScale((tale % 12))))
         });
 
         // setup the flow edges
         diac_edges.forEach((edge) => {
-          let source_period = getPreviousPeriod(period,true)
-          let s = coordinates_1D.findRow(edge.get('source') + '_' + source_period,'id')
-          let t = coordinates_1D.findRow(edge.get('target') + '_' + periods_and_periods_str[period],'id') 
+          let s = nodes.findRow(edge.get('source'),'id')
+          let t = nodes.findRow(edge.get('target'),'id') 
           let tale = parseInt(edge.get('sync_component'));
           if (s != undefined && t != undefined) {
             flowEdges.push(new flowEdge(period
-                                       ,xFlowScale(prev)  ,yFlowScale(parseFloat(s.get('y')))
-                                       ,xFlowScale(period),yFlowScale(parseFloat(t.get('y')))
+                                       ,xFlowScale(period)  ,yFlowScale(parseFloat(s.get('z')))
+                                       ,xFlowScale(getNextPeriod(period)),yFlowScale(parseFloat(t.get('z')))
                                        ,flowEdgesScale(parseFloat(edge.get('weight')))
                                        ,tale
                                        ,talesColorScale((tale % 12))));
@@ -500,7 +470,7 @@
         })          
 
         // setup the flow and surviving lines
-        let nodes_mid_y = (min(blocks_ys) + max(blocks_ys)) / 2
+        let nodes_mid_y = (min(blocks_zs) + max(blocks_zs)) / 2
         let flow_h = flowLinesScale(flowByPeriod[cpt])
         let flow_lineage_h = flowLinesScale(blocks_lineage)
         flowLinesSup.push([node_x,nodes_mid_y - flow_h/2])
@@ -629,14 +599,13 @@
       cpt = 0
       periods.forEach((period) => {
         canvas.push()
-        let timeStamp = periods_str[cpt]
         canvas.textAlign(CENTER)
         canvas.textSize(16);
         canvas.textFont(neuekabel);
         if (periods[focus] == period) {
           canvas.textFont(neuekabelbold);
         }
-        canvas.text(timeStamp,xFlowScale(period),height/2 + 5);
+        canvas.text(period,xFlowScale(period),height/2 + 5);
         canvas.pop()
         cpt ++;   
       })
@@ -644,7 +613,7 @@
 
     function drawChronoView(canvas) {
       
-      let background_color = color(((shader == "night") ? '#505966' : '#e5e1d8'));
+      let background_color = color(((shader == "night") ? '#505966' : '#eeeeee'));
       canvas[0].background(background_color);
 
       /* Steps nodes and edges */
@@ -703,7 +672,7 @@
       /* Canopy */
       
       if (displayCanopy) {
-        background_color = color(((shader == "night") ? '#33363C' : '#BBB8B0'));
+        background_color = color(((shader == "night") ? '#33363C' : '#eeeeee'));
         background_color.setAlpha(130);
         canvas[1].background(background_color);
         canopyHulls[periods[focus]].forEach((hull) => {

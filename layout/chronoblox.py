@@ -39,10 +39,14 @@ parser.add_argument('--snapshots'
 				   , default='board_directors', help='path to the snapshots (default: load the board_directors data set)')
 parser.add_argument('--scope'
 	               , type=int, nargs=1
-	               , default=1, help='limit the temporal scope of the Jaccard index; unlimited scope is -1')
+	               , default=[1], help='limit the temporal scope of the Jaccard index; unlimited scope is -1')
 parser.add_argument('--threshold'
 	               , type=float, nargs=1
-	               , default=0.1, help='filter pointless inter-temporal edges before embedding')
+	               , default=[0.1], help='filter pointless inter-temporal edges before embedding')
+parser.add_argument('--block_size'
+	               , type=int, nargs=1
+	               , default=[-1], help='filter small blocks')
+
 args = parser.parse_args()
 
 
@@ -77,8 +81,6 @@ else :
 	phases = ["2002-06-01","2003-06-01","2004-06-01","2005-06-01","2006-06-01","2007-06-01","2008-06-01","2009-06-01","2010-06-01","2011-06-01"]
 	cpt = 0
 	for phase in phases :
-		if cpt > 2 :
-			continue
 		g = gt.collection.ns["board_directors/net1m_" + phase]
 		g.gp["phase"] = g.new_graph_property("string")
 		g.gp["phase"] = phase
@@ -211,7 +213,7 @@ for snapshot in snapshots :
 
 	for v in snapshot.vertices() :
 
-		# [block] aggregate the vertices at the block level
+		# [block] 1) aggregate the vertices at the block level
 
 		v_id   = getVertexId(snapshot,v)
 		v_meta = getVertexMeta(snapshot,v)
@@ -224,6 +226,11 @@ for snapshot in snapshots :
 		else :
 			blocks[b_id] = [v_id]
 			blocks_to_meta[b_id] = [v_meta]
+
+	# [block] 2) maybe filter the small blocks
+
+	if args.block_size[0] > 0 :
+		blocks = {k: v for k, v in blocks.items() if len(v) > args.block_size[0]}
 
 	for b_id in blocks.keys() :	
 		sequence_of_blocks[b_id] = blocks[b_id]
@@ -346,7 +353,7 @@ for bi in sequence_of_blocks.keys() :
 
 			# [diac_edges] 1) put the (t-1,t) inter-temporal edges aside to compute the inter-temporal lineages 
 			
-			if (sim >= args.threshold) :
+			if (sim >= args.threshold[0]) :
 				# these edges will be the only visible in the interface 
 				diac_edges[(bi,bj)] = {'w':sim,'shhi':0}
 
@@ -396,10 +403,10 @@ print('\nembed the sequence of meta-graphs')
 def areInScope(bi_t,bj_t) :
 	bi_t_idx = phases.index(bi_t)
 	bj_t_idx = phases.index(bj_t)
-	if (args.scope < 0) :
+	if (args.scope[0] < 0) :
 		return True
 	else :
-		return (abs(bi_t_idx - bj_t_idx) <= args.scope)
+		return (abs(bi_t_idx - bj_t_idx) <= args.scope[0])
 
 mat = np.array(mat)
 b_ids = list(sequence_of_blocks.keys())

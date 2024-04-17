@@ -104,7 +104,7 @@ class flowNode {
     this.x = x;
     this.y = y;
     this.w = weight;
-    this.period = parseInt(id.split('_')[0]);
+    this.period = id.split('_')[1];
     this.tale = tale_id;
     this.tale_color = tale_color;
   }
@@ -240,13 +240,12 @@ class nodeTale {
 }
 
 class chronoNode {
-  constructor(id,block_id,x,y,weight,tale_id,meta) {
+  constructor(id,x,y,weight,tale_id,meta) {
     this.id = id;
-    this.block_id = block_id;
     this.x = x;
     this.y = y;
     this.w = nodesScale(weight);
-    this.period = parseInt(id.split('_')[0]);
+    this.period = id.split('_')[1];
     this.tale = tale_id;
     this.meta = meta;
   }
@@ -296,8 +295,5 @@ class chronoNode {
   } 
   getTale() {
     return this.tale;
-  }    
-  getBlockId() {
-    return this.block_id;
-  }  
+  } 
 }
