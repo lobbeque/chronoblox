@@ -1,0 +1,796 @@
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.8.0/lib/p5.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://kit.fontawesome.com/8e4c4e5f94.js" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="./ressources.js"></script>
+    <script type="text/javascript" src="./controlers.js"></script>
+    <script type="text/javascript" src="./class.js"></script>
+  </head>
+
+  <style type="text/css">
+
+    @font-face {
+        font-family: NeueKabel;
+        src: url("fonts/NeueKabel.otf") format("opentype");
+    }    
+
+    @font-face {
+        font-family: NeueKabel;
+        font-weight: bold;
+        src: url("fonts/NeueKabel-Bold.otf") format("opentype");
+    }
+
+    .container {
+      display: flex;
+      height: 95vh;
+      font-family: NeueKabel, sans-serif;
+    }
+
+    /* buttons */
+
+    .button {
+      background-color: white;
+      border: 1.5px solid #261D11;
+      cursor: pointer;   
+    }
+
+    .button:hover {
+      background-color: #261D11;
+      color: white;
+    }  
+
+    .button-clicked {
+      background-color: #261D11;
+      color: white;
+    }
+
+    .btn-top {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+    }  
+
+    .title {
+      margin-bottom: 10px;
+    }      
+
+    .dashboard {
+      width: 3%;
+      height: 95vh;
+    }
+
+    .dashboard-legend {
+      font-size: 18px;
+      text-align: center;
+      margin-bottom: 5px;
+    }
+
+    .logo {
+      display: flex;
+      justify-content: center;      
+      width : 90%
+    }
+    
+    .canvas {
+      flex-grow: 1;
+      margin : auto;
+      height: 95vh;
+    }
+
+    .footer {
+      margin-left: 3%;
+      margin-top: 10px;
+      font-size: 12px;
+      font-weight: bold;
+      font-family: NeueKabel, sans-serif;
+    }
+
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }    
+
+    /* Tooltip text */
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 120px;
+      background-color: #261D11;
+      color: #fff;
+      border: 2px solid #fff;
+      text-align: left;
+      padding: 5px 0;
+      padding-left: 10px;
+     
+      position: absolute;
+      left: 30px;
+      top: -4px;
+      z-index: 1;
+    }
+
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+    }    
+
+
+  </style>
+
+  <body>
+    <main> 
+      <div class="container">
+        <div class="dashboard">
+          <!-- title -->
+          <img src = "./logo.svg" class="logo" alt="Chronoblox"/>
+          
+          <!-- night / day mode -->
+          <p class="dashboard-legend">mode</p>
+          <div class="btn-top">
+            <!-- night -->
+            <button onclick="setShader('night')" class="button" id="nightshader">
+              <i class="fa-solid fa-moon"></i>
+            </button>            
+          </div>           
+          <div class="btn-top">
+            <!-- day -->
+            <button onclick="setShader('day')" class="button" id="dayshader">
+              <i class="fa-solid fa-sun"></i>
+            </button>            
+          </div>           
+
+          <!-- layers -->
+          <p class="dashboard-legend">layers</p>
+          <div class="btn-top">
+            <!-- display canopy -->
+            <button onclick="removeCanopy()" class="button button-clicked" id="btncanopy">
+              <i class="fa-solid fa-layer-group"></i>
+            </button>            
+          </div>           
+          <div class="btn-top">
+            <!-- display edges -->
+            <button onclick="removeEdges()" class="button button-clicked" id="btnedges">
+              <i class="fa-solid fa-circle-nodes"></i>
+            </button>            
+          </div> 
+          <div class="btn-top">
+            <!-- display metadata -->
+            <button onclick="removeMeta()" class="button tooltip" id="btnmeta">
+              <i class="fa-solid fa-circle-question"></i>
+              <span class="tooltiptext" id="metalegend" ></span>
+            </button>            
+          </div>
+          <div class="btn-top">
+            <!-- display tales -->
+            <button onclick="removeTales()" class="button" id="btntales">
+              <i class="fa-solid fa-bars-staggered"></i>
+            </button>            
+          </div>                    
+        </div> 
+        <div class="canvas" id="p5canvas"></div>    
+      </div>
+      <div class="footer">CSS Team / Marc Bloch Center / 2024</div> 
+    </main>
+  </body>
+  <script type="text/javascript">
+
+    p5.disableFriendlyErrors = true;
+
+    // fonts
+    let neuekabel,neuekabelbold;
+
+    // interactions
+    let focus = 0;
+    let shader = "night";
+    let fromLeftToRight = true;
+
+    // shared elements
+    let nodesScale,flowEdgesScale;
+    let meta_data = {};
+   
+    // flow chart elements
+    let flowNodes = [], flowEdges = [];
+    let flowLines = [], flowLineage = [];
+    let flowLinesScale;
+    let xFlowScale, yFlowScale;
+
+    // Canopy
+    let canopyHulls = {};
+    let displayCanopy = true;
+
+    // Chronoblocks
+    let chronoNodes = {}, chronoSyncEdges = [];
+    let displayMeta = false;
+    let displayEdges = true;
+    let xLimitsChrono, yLimitsChrono;
+    let chronoSyncEdgesScale;
+    let metaColorScale;
+
+    // Tales
+    const talesColorScale = d3.scaleOrdinal(d3.schemeSet3);
+    let talesEdges = {}, talesNodes = {};
+    let talesEdgesScale;
+    let displayTales = false;
+    let currentTale = -2;
+    let clickedNode = ''; 
+
+    // raw data elements
+    let coordinates_2D, coordinates_1D, nodes, edges;
+    let periods = [], periods_str = []; periods_and_periods_str = {}
+
+    // canvas elements
+    let w = document.getElementById("p5canvas").offsetWidth,
+        h = document.getElementById("p5canvas").offsetHeight;   
+
+    function sumFlowByPeriod() {
+      let flowByPeriod = periods.map((period) => {
+        let blocks = coordinates_2D.findRows(period, 'period_int'); 
+        let sum = blocks.reduce((acc,b) => {
+          return acc + parseInt((nodes.findRow(b.get('id'),'id')).get('size'))
+        },0)
+        return sum        
+      })      
+      return flowByPeriod
+    }
+
+    function getLimits(key,table,predicate) {
+      let inf = Number.MAX_VALUE, sup = Number.MIN_VALUE;
+      (table.getRows()).forEach((row) => {
+        if (predicate != null) {
+          // add an extra filter if needed
+          let predicate_key = Object.keys(predicate)[0];
+          if (row.get(predicate_key) != predicate[predicate_key]) {
+            return;
+          }
+        }
+        let v = parseFloat(row.get(key))
+        if (v > sup) {
+          sup = v
+        }
+        if (v < inf) {
+          inf = v
+        }        
+      })
+      return [inf,sup];
+    }
+
+    function zip(keys, values) {
+        let acc = {};
+        for (let i = 0; i < keys.length; i++) {
+            acc[keys[i]] = values[i];
+        }
+        return acc;
+    } 
+
+    function flatten(arr) {
+      let tmp = arr.reduce((acc,cur) => acc.concat(cur), []);
+      return [...new Set(tmp)]
+    }
+
+
+    function getNeighbours(id,period) {
+      let neighbours = raw_sync_edges
+            .findRows(period, 'period_int')
+            .filter((edge) => ( (edge.get('source') == id) || (edge.get('target') == id)) 
+                             && (edge.get('source') != edge.get('target')))
+      return neighbours      
+    } 
+
+    function getPreviousPeriod(prd,str) {
+      let idx = periods.indexOf(prd)
+      let previous_prd = periods[idx - 1]
+      if (!str) {
+        return previous_prd
+      } else {
+        return periods_and_periods_str[previous_prd]
+      }
+    }
+
+    function getNextPeriod(prd,str) {
+      let idx = periods.indexOf(prd)
+      let next_prd = periods[idx + 1]
+      if (!str) {
+        return next_prd
+      } else {
+        return periods_and_periods_str[next_prd]
+      }
+    } 
+
+    function setupReadingDirection() {
+      let xs_fst = coordinates_2D.findRows(periods[0],'period_int').map((block) => parseFloat(block.get('x')));
+      let xs_lst = coordinates_2D.findRows(periods[periods.length-1],'period_int').map((block) => parseFloat(block.get('x')));
+      if (min(xs_fst) < max(xs_lst)) {
+        fromLeftToRight = true
+      } else {
+        fromLeftToRight = false
+      } 
+    }       
+
+    function getDegree(id,period) {
+      let neighbours = getNeighbours(id,period)
+      return neighbours.length
+    }
+
+    function getStrength(id,period) {
+      let neighbours = getNeighbours(id,period)
+      return (neighbours.map((e) => parseFloat(e.get('weight')))).reduce((acc,cur) => acc + cur,0)
+    } 
+
+    function preload() {
+      coordinates_2D = loadTable('../../output_data/retweets-impact-investing-time_slice_12-time_overlap_12filtered-inter_temporal_overlap-2D_pacmap.csv','csv','header')
+      coordinates_1D = loadTable('../../output_data/retweets-impact-investing-time_slice_12-time_overlap_12filtered-inter_temporal_overlap-1D_pacmap.csv','csv','header')
+      
+      nodes = loadTable('../../output_data/retweets-impact-investing-time_slice_12-time_overlap_12filtered-nodes.csv','csv','header')
+      edges = loadTable('../../output_data/retweets-impact-investing-time_slice_12-time_overlap_12filtered-edges.csv','csv','header')
+      
+      neuekabel = loadFont('fonts/NeueKabel.otf');
+      neuekabelbold = loadFont('fonts/NeueKabel-Bold.otf');
+
+      setShader("night")
+    }
+    
+    function setup() {
+
+      // canvas
+      
+      mainCanvas = createCanvas(w,h)
+      mainCanvas.parent("p5canvas")
+
+      topCanvas = createGraphics(w,h/6)
+      midCanvas = createGraphics(w,h/5 - h/6)
+      chronoCanvas = [createGraphics(w,h - h/5),createGraphics(w,h - h/5)]
+
+      xLimitsChrono = getLimits('x',coordinates_2D)
+      yLimitsChrono = getLimits('y',coordinates_2D)
+      yLimitsFlow   = getLimits('y',coordinates_1D)      
+
+      // raw data to edges / nodes data
+
+      raw_diac_edges = edges.findRows('diac', 'type')
+      raw_sync_edges = edges.findRows('sync', 'type')
+
+      diac_edges_limits = getLimits('weight',edges,{'type':'diac'})
+      sync_edges_limits = getLimits('weight',edges,{'type':'sync'})
+      nodes_size_limits = getLimits('size',nodes)
+
+      // periods
+
+      periods = coordinates_2D.getColumn('period_int')
+      periods = Array.from(new Set(periods))
+      periods.sort(function (a,b) {return a-b;})
+
+      periods.forEach((period) => {
+        let row = coordinates_2D.findRow(period,'period_int');
+        periods_str.push(row.get('period_str'))
+        periods_and_periods_str[period] = row.get('period_str')
+      })
+
+      setupReadingDirection()
+
+      // Scales
+
+      nodesScale = d3.scaleLog(nodes_size_limits,[5, 20]);
+      flowEdgesScale = d3.scaleLinear(diac_edges_limits,[100, 255]);
+      chronoSyncEdgesScale = d3.scaleLinear(sync_edges_limits,[1, 7]);
+      talesEdgesScale = d3.scaleLinear(diac_edges_limits,[4,8]);
+
+      // scales for flow chart 
+
+      xFlowScale = d3.scaleBand(([-1].concat(periods)), [0, w])
+      yFlowScale = d3.scaleLinear(yLimitsFlow, [h/60, h/6 - h/60])
+      let dx_timeScale = xFlowScale(periods[1]) - xFlowScale(periods[0])
+      let flowByPeriod = sumFlowByPeriod()
+      flowLinesScale = d3.scaleLinear([0,max(flowByPeriod)],[0,h/6])
+
+      // prepare the elements to be drawn
+
+      let prev = 0, cpt = 0;
+
+      let flowLinesSup = [], flowLinesInf = []; 
+      let flowLineageSup = [], flowLineageInf = []; 
+      let periods_blocks_vectors = {};
+
+      periods.forEach((period) => {
+        
+        let blocks_1D = coordinates_1D.findRows(period, 'period_int'); 
+        let blocks_2D = coordinates_2D.findRows(period, 'period_int'); 
+        let diac_edges = raw_diac_edges.filter((row) => period == parseInt(row.get('period_int')));
+        let sync_edges = raw_sync_edges.filter((row) => period == parseInt(row.get('period_int')));
+      
+        // setup the chrono chart sync_edges
+        sync_edges.sort(function (e1,e2) {return parseInt(e1.get('weight')) - parseInt(e2.get('weight'));})
+        sync_edges.forEach((edge) => {
+          console.log(edge.get('source') + '_' + edge.get('period_str'))
+          let s = (coordinates_2D.findRows(period, 'period_int'))
+                    .find((row) => row.get('id') == edge.get('source') + '_' + edge.get('period_str'))
+          let t = (coordinates_2D.findRows(period, 'period_int'))
+                    .find((row) => row.get('id') == edge.get('target') + '_' + edge.get('period_str'))
+          let weight = parseInt(edge.get('weight'));
+          if (s != undefined && t != undefined && s != t && weight > 0) { 
+            chronoSyncEdges.push(new chronoSyncEdge(period
+                                                   ,toXScreen(parseFloat(s.get('x')))
+                                                   ,toXScreen(parseFloat(t.get('x')))
+                                                   ,toYScreen(parseFloat(s.get('y')))
+                                                   ,toYScreen(parseFloat(t.get('y')))
+                                                   ,weight))}})
+
+        // setup the chrono chart diac_edges
+        diac_edges.sort(function (e1,e2) {return parseInt(e2.get('weight')) - parseInt(e1.get('weight'));})
+        diac_edges.forEach((edge) => {
+          let source_period = getPreviousPeriod(period,true)
+          let s = coordinates_2D.findRow(edge.get('source') + '_' + source_period,'id')
+          let t = coordinates_2D.findRow(edge.get('target') + '_' + periods_and_periods_str[period],'id') 
+          if (s != undefined && t != undefined && s != t) {
+            let tale = parseInt(edge.get('sync_component'))
+            let diac_edge = new taleEdge(toXScreen(parseFloat(s.get('x')))
+                                        ,toXScreen(parseFloat(t.get('x')))
+                                        ,toYScreen(parseFloat(s.get('y')))
+                                        ,toYScreen(parseFloat(t.get('y')))
+                                        ,parseFloat(edge.get('weight'))
+                                        ,tale
+                                        ,talesColorScale((tale % 12)))
+            if (tale in talesEdges) {
+              talesEdges[tale].push(diac_edge)
+            } else {
+              talesEdges[tale] = [diac_edge]
+            }
+          }
+        })
+
+
+        let blocks_ys = blocks_1D.map((b) => yFlowScale(parseFloat(b.get('y'))))
+        let node_x = xFlowScale(period)
+        let blocks_lineage = 0
+        let blocks_vectors = {}
+
+        // setup the chrononodes
+        blocks_2D.forEach((block) => {
+          let x_screen = toXScreen(parseFloat(block.get('x')));
+          let y_screen = toYScreen(parseFloat(block.get('y')));
+          let node_id = period.toString() + '_' + block.get('id')
+          let node = nodes.findRow(block.get('id'),'id')
+          let node_weight = parseInt(node.get('size'));
+          let node_meta = node.get('meta')
+          let tale = parseInt(node.get('diac_component'));
+          chronoNodes[block.get('id')] = new chronoNode(node_id,block.get('id'),x_screen,y_screen,node_weight,tale,node_meta)
+
+          // for drawing the tales
+
+          let diac_node = new nodeTale(x_screen,y_screen,node_weight,tale,talesColorScale((tale % 12)))
+          if (tale in talesNodes) {
+            talesNodes[tale].push(diac_node)
+          } else {
+            talesNodes[tale] = [diac_node]
+          }
+
+          // for drawing the canopy hull
+
+          let node_hull = parseInt(node.get('sync_component'));
+          let node_vector = createVector(toXScreen(parseFloat(block.get('x'))),toYScreen(parseFloat(block.get('y'))));
+          if (blocks_vectors[node_hull] !== undefined) {
+            blocks_vectors[node_hull].push(node_vector)
+          } else {
+            blocks_vectors[node_hull] = [node_vector]
+          }
+        })        
+
+        // setup the flow chart nodes
+        blocks_1D.forEach((block) => {
+          let node = nodes.findRow(block.get('id'),'id')
+          blocks_lineage += Math.round(node.get('lineage_size'))
+          let node_size = parseInt(node.get('size'));
+          let tale = parseInt(node.get('diac_component'));
+          let node_id = period.toString() + '_' + block.get('id')
+          let node_y = yFlowScale(parseFloat(block.get('y')))
+          flowNodes.push(new flowNode(node_id,node_x,node_y,nodesScale(node_size),tale,talesColorScale((tale % 12))))
+        });
+
+        // setup the flow edges
+        diac_edges.forEach((edge) => {
+          let source_period = getPreviousPeriod(period,true)
+          let s = coordinates_1D.findRow(edge.get('source') + '_' + source_period,'id')
+          let t = coordinates_1D.findRow(edge.get('target') + '_' + periods_and_periods_str[period],'id') 
+          let tale = parseInt(edge.get('sync_component'));
+          if (s != undefined && t != undefined) {
+            flowEdges.push(new flowEdge(period
+                                       ,xFlowScale(prev)  ,yFlowScale(parseFloat(s.get('y')))
+                                       ,xFlowScale(period),yFlowScale(parseFloat(t.get('y')))
+                                       ,flowEdgesScale(parseFloat(edge.get('weight')))
+                                       ,tale
+                                       ,talesColorScale((tale % 12))));
+          }
+        })          
+
+        // setup the flow and surviving lines
+        let nodes_mid_y = (min(blocks_ys) + max(blocks_ys)) / 2
+        let flow_h = flowLinesScale(flowByPeriod[cpt])
+        let flow_lineage_h = flowLinesScale(blocks_lineage)
+        flowLinesSup.push([node_x,nodes_mid_y - flow_h/2])
+        flowLinesInf.push([node_x,nodes_mid_y + flow_h/2])
+        flowLineageSup.push([node_x,nodes_mid_y - flow_lineage_h/2])
+        flowLineageInf.push([node_x,nodes_mid_y + flow_lineage_h/2])  
+
+        // setup the canopy
+        canopyHulls[period] = [] 
+        Object.values(blocks_vectors).forEach((points) => {
+          canopyHulls[period].push(new canopyHull(period,points))
+        })
+ 
+        prev = period;
+        cpt ++;
+
+      })
+
+      // meta data
+      
+      let metalegend = document.getElementById("metalegend")
+      let meta_domain = nodes.getColumn('meta')
+      meta_domain = Array.from(new Set(meta_domain))
+      meta_domain.sort(function (a,b) {return a-b;})
+      metaColorScale = d3.scaleOrdinal(meta_domain, ["#0072b2","#e69f00","#56b4e9","#009e73","#f0e442"])
+      meta_domain.forEach((meta) => {
+        if (meta != "") {
+          metalegend.innerHTML += `<p><i class="fa-solid fa-circle" style="color:` 
+                               + metaColorScale(meta) + `;"></i> ` 
+                               + meta + `</p>`;
+        }
+      })
+
+      // aggregate the flow lines border 
+      flowLines = (flowLinesSup.concat(reverse(flowLinesInf))).map((point) => {
+        return createVector(point[0],point[1])
+      })
+
+      flowLineage = (flowLineageSup.concat(reverse(flowLineageInf))).map((point) => {
+        return createVector(point[0],point[1])
+      })  
+
+      // sort the flow edges and nodes for readability    
+      flowNodes.sort((a,b) => b.getWidth()  - a.getWidth())
+      flowEdges.sort((a,b) => a.getWeight() - b.getWeight())
+      chronoSyncEdges.sort((a,b) => a.getWeight() - b.getWeight())
+    }   
+
+    function toXScreen(x) {
+      if (fromLeftToRight) {
+        return map(x, xLimitsChrono[0] - 1, xLimitsChrono[1] + 1, 0, w);
+      } else {
+        return map(x, xLimitsChrono[0] - 1, xLimitsChrono[1] + 1, w, 0);
+      }  
+    }
+
+    function toYScreen(y) {
+      return map(y, yLimitsChrono[0] - 1, yLimitsChrono[1] + 1, 0, 5*h/6);
+    }  
+
+    function drawFlowChart(canvas) {
+      
+      // draw the background
+      canvas.background("#e5e1d8");
+   
+      // draw the flow line
+      canvas.push()
+      canvas.noStroke()
+      canvas.fill("#c8c0aa")
+      drawRoundedShape(flowLines,60,canvas,0)
+      canvas.pop()
+
+      // draw the lineage flow line
+      canvas.push()
+      canvas.noStroke()
+      canvas.fill("#9c9280")
+      drawRoundedShape(flowLineage,60,canvas,0)
+      canvas.pop() 
+
+      // draw the vertical grid lines
+      canvas.push()
+      periods.forEach((period) => {
+        let x = xFlowScale(period);
+        if (period != periods[focus]) {
+          canvas.stroke(255);   
+          canvas.strokeWeight(1);
+        } else {
+          canvas.stroke("#ff6361")   
+          canvas.strokeWeight(3);
+        }      
+        canvas.line(x,0,x,h/6);        
+      })
+      canvas.pop()
+
+      // draw the flow edges
+      if ((currentTale in talesEdges) && (clickedNode != '')) {
+        flowEdges.forEach((e) => {
+          if (currentTale != e.getLineage()) {
+            e.display(canvas,false)
+          }
+        })
+        flowEdges.forEach((e) => {
+          if (currentTale == e.getLineage()) {
+            e.display(canvas,true)
+          }
+        })          
+      } else {
+        flowEdges.forEach((e) => e.display(canvas,false))
+      }
+
+      // draw the flow nodes
+      flowNodes.forEach((n) => {
+        if (n.getTale() != currentTale) {
+          n.display(canvas)
+        }
+      })
+      flowNodes.forEach((n) => {
+        if (n.getTale() == currentTale) {
+          n.display(canvas)
+        }
+      })      
+    }
+
+    function drawTimeLine(canvas,height) {
+      canvas.background(255)
+      cpt = 0
+      periods.forEach((period) => {
+        canvas.push()
+        let timeStamp = periods_str[cpt]
+        canvas.textAlign(CENTER)
+        canvas.textSize(16);
+        canvas.textFont(neuekabel);
+        if (periods[focus] == period) {
+          canvas.textFont(neuekabelbold);
+        }
+        canvas.text(timeStamp,xFlowScale(period),height/2 + 5);
+        canvas.pop()
+        cpt ++;   
+      })
+    }   
+
+    function drawChronoView(canvas) {
+      
+      let background_color = color(((shader == "night") ? '#505966' : '#e5e1d8'));
+      canvas[0].background(background_color);
+
+      /* Steps nodes and edges */
+      
+      periods.forEach((period) => {
+
+          // draw from past to present
+          if (periods.indexOf(period) != focus) {
+            
+            // draw sync_edges 
+            if (displayEdges) {
+              chronoSyncEdges.forEach((edge) => {
+                if (edge.getPeriod() == period) {
+                    edge.displayEdge(canvas[0],"sync_edge_step")
+                }
+              })
+            }
+
+            // draw nodes 
+            Object.values(chronoNodes).forEach((node) => {
+              if ((node.getPeriod() == period)) {
+                if (currentTale < 0) {
+                  node.display(canvas[0],"node_step")
+                } else if ((node.getTale() != currentTale)) {
+                  node.display(canvas[0],"node_step")
+                }
+              }
+            })
+
+          }
+      })   
+
+      /* Focused nodes and edges */
+
+      // sync_edges
+      if (displayEdges) {
+        chronoSyncEdges.forEach((edge) => {
+          if (edge.getPeriod() == periods[focus]) {
+              edge.displayStroke(canvas[0])
+          }
+        })  
+        chronoSyncEdges.forEach((edge) => {
+          if (edge.getPeriod() == periods[focus]) {
+              edge.displayEdge(canvas[0],"sync_edge_focus")
+          }
+        })        
+      }
+
+      // chrononodes
+      Object.values(chronoNodes).forEach((node) => {
+        if ((node.getPeriod() == periods[focus]) && (node.getTale() != currentTale)) {
+          node.display(canvas[0],"node_focus")
+        }
+      }) 
+
+      /* Canopy */
+      
+      if (displayCanopy) {
+        background_color = color(((shader == "night") ? '#33363C' : '#BBB8B0'));
+        background_color.setAlpha(130);
+        canvas[1].background(background_color);
+        canopyHulls[periods[focus]].forEach((hull) => {
+          hull.display(canvas[1])
+        })
+      }
+
+      /* Tales */
+
+      if (clickedNode != '') {
+        if (currentTale in talesEdges) {
+          talesEdges[currentTale].forEach((diac_edge) => {
+            diac_edge.displayStroke(canvas[1])
+          })
+          talesEdges[currentTale].forEach((diac_edge) => {
+            diac_edge.displayEdge(canvas[1])
+          }) 
+          talesNodes[currentTale].forEach((diac_node) => {
+            diac_node.display(canvas[1])
+          })         
+        } 
+      } else if (displayTales) {
+        let diac_edges = flatten(Object.values(talesEdges))
+        diac_edges.forEach((diac_edge) => {
+          diac_edge.displayStroke(canvas[1])
+        })
+        diac_edges.forEach((diac_edge) => {
+          diac_edge.displayEdge(canvas[1])
+        })
+        let diac_nodes = flatten(Object.values(talesNodes))
+        diac_nodes.forEach((diac_node) => {
+          if(diac_node.getTale() >= 0) {
+            diac_node.display(canvas[1])
+          }
+        })               
+      }
+
+      Object.values(chronoNodes).forEach((node) => {
+        if (node.getTale() == currentTale) {
+          if (node.getPeriod() == periods[focus]) {
+            node.display(canvas[1],"node_focus")  
+          } else {
+            node.display(canvas[1],"node_step")
+          }
+        } else if (displayTales && (node.getTale() >= 0)) {
+          if (node.getPeriod() == periods[focus]) {
+            node.display(canvas[1],"node_focus")  
+          } else {
+            node.display(canvas[1],"node_step")
+          }          
+        }
+      })            
+    }     
+
+    function draw() {
+      chronoCanvas[0].clear();
+      chronoCanvas[1].clear();
+      drawFlowChart(topCanvas);
+      drawTimeLine(midCanvas,h/5 - h/6);
+      drawChronoView(chronoCanvas);
+      image(topCanvas, 0, 0);
+      image(midCanvas, 0, h/6);
+      image(chronoCanvas[0], 0, h/5);
+      image(chronoCanvas[1], 0, h/5);
+    }  
+
+    function mergeByAlternating(l1,l2) {
+      let merged = l1.reduce((acc,v,i) => {
+        return acc.concat(v,l2[i]); 
+      }, []);
+      if (l1.length > l2.length) {
+        merged = merged.filter((v) => v !== undefined)
+      } else if (l2.length > l1.length) {
+        merged = merged.concat(l2.slice(l1.length))
+      }
+      return merged;
+    }
+
+    function findStep(i,lst,ego) {
+        if (lst.length == 0) {
+          return ego
+        } else if (i >= lst.length) {
+          return lst[lst.length - 1]
+        } else {
+          return lst[i]
+        }      
+    }
+   
+  </script>
+</html>
