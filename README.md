@@ -70,7 +70,7 @@ This version of Chronoblox only implements a [stochastic block model](https://gr
 ### Launch the interface
 
 Go to `./layout` and open the file `chronoblox.html` with your favorite IDE.
-In the function `preload()` 
+In the function `preload()` :
 
 ```javascript
     function preload() {
@@ -81,6 +81,19 @@ In the function `preload()`
       setShader("night")
     }
 ```
+
+Replace the default blocks and edges paths with your own paths and files produced by the layout, such as :
+
+```javascript
+    function preload() {
+      nodes = loadTable('~/path/to/the/blocks.csv','csv','header')
+      edges = loadTable('~/path/to/the/edges.csv','csv','header')
+      neuekabel = loadFont('fonts/NeueKabel.otf');
+      neuekabelbold = loadFont('fonts/NeueKabel-Bold.otf');
+      setShader("night")
+    }
+```
+Then open the file `chronoblox.html` in your web browser.
 
 
 
