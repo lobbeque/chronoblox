@@ -2,8 +2,6 @@
 # chronoblox.py
 # description : Chronoblox performs the chronophotography of a sequence of snapshots
 # licence : AGPL + CECILL v3
-# author : quentin lobbé - quentin.lobbe@gmail.com - CSS Team, Marc Bloch Center, Berlin
-# funding : ERC Socsemics
 # paper :  
 #######
 
