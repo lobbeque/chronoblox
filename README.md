@@ -67,6 +67,21 @@ This version of Chronoblox only implements a [stochastic block model](https://gr
 
 **Dependencies** : [p5.js](https://p5js.org/) | [d3.js](https://d3js.org/) | [fontawesome](https://fontawesome.com/)
 
+### Launch the interface
+
+Go to `./layout` and open the file `chronoblox.html` with your favorite IDE.
+In the function `preload()` 
+
+```javascript
+    function preload() {
+      nodes = loadTable('../layout/board_directors_blocks.csv','csv','header')
+      edges = loadTable('../layout/board_directors_edges.csv','csv','header')
+      neuekabel = loadFont('fonts/NeueKabel.otf');
+      neuekabelbold = loadFont('fonts/NeueKabel-Bold.otf');
+      setShader("night")
+    }
+```
+
 
 
 
