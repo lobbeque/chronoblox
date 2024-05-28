@@ -68,8 +68,8 @@ graph_name = ""
 if args.snapshots != "board_directors" :
 	# load your own snapshots
 	print("\nloading your own snapshots ...")
-	paths = glob.glob(args.path_to_snapshots + "*.gt")
-	snapshots = map(lambda p: loadSnapshot(p), paths)
+	paths = glob.glob(args.snapshots[0] + "*.gt")
+	snapshots = list(map(lambda p: loadSnapshot(p), paths))
 	snapshots.sort(key=getGraphPhase)
 	graph_name = getGraphName(snapshots[0])
 	print("\nsnapshots loaded")
