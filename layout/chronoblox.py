@@ -5,6 +5,8 @@
 # paper :  
 #######
 
+# conda activate gt
+
 
 ####
 ## import
@@ -182,6 +184,12 @@ def connectedComponents (components,cur,graph) :
 def getVertexId (snapshot,v) :
 	with suppress(KeyError): return snapshot.vp.vid[v]
 
+def getVertexMetaType (snapshot,v) :
+	try:
+		return snapshot.vp.vmeta.value_type()
+	except Exception as e:
+		return 'NA'	
+
 def getVertexMeta (snapshot,v) :
 	try:
 		return snapshot.vp.vmeta[v]
@@ -214,16 +222,23 @@ for snapshot in snapshots :
 		# [block] 1) aggregate the vertices at the block level
 
 		v_id   = getVertexId(snapshot,v)
+		v_meta_type = getVertexMetaType(snapshot,v)
 		v_meta = getVertexMeta(snapshot,v)
 		
 		b_id = str(partition.get_blocks()[v]) + "_" + phase
 
 		if b_id in blocks.keys() :
 			blocks[b_id].append(v_id)
-			blocks_to_meta[b_id].append(v_meta)
+			if "vector" in v_meta_type :
+				blocks_to_meta[b_id] = blocks_to_meta[b_id] + list(v_meta)
+			else :	
+				blocks_to_meta[b_id].append(v_meta)
 		else :
 			blocks[b_id] = [v_id]
-			blocks_to_meta[b_id] = [v_meta]
+			if "vector" in v_meta_type :
+				blocks_to_meta[b_id] = list(v_meta)
+			else :
+				blocks_to_meta[b_id] = [v_meta]
 
 	# [block] 2) maybe filter the small blocks
 
