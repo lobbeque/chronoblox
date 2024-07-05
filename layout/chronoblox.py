@@ -21,11 +21,12 @@ import graph_tool.all as gt
 import functools
 import numpy as np  
 import pacmap
+import networkx as nx
 
 from pecanpy import pecanpy as node2vec
 from gensim.models import Word2Vec,KeyedVectors
 from sklearn.decomposition import PCA
-
+from community import community_louvain
 
 ####
 ## args
@@ -37,15 +38,24 @@ parser = argparse.ArgumentParser( description='Process the chronophotography of 
 parser.add_argument('--snapshots'
 				   , nargs=1
 				   , default='board_directors', help='path to the snapshots (default: load the board_directors data set)')
-parser.add_argument('--scope'
-	               , type=int, nargs=1
-	               , default=[1], help='limit the temporal scope of the Jaccard index; unlimited scope is -1')
-parser.add_argument('--threshold'
-	               , type=float, nargs=1
-	               , default=[0.1], help='filter pointless inter-temporal edges before embedding')
-parser.add_argument('--block_size'
-	               , type=int, nargs=1
-	               , default=[-1], help='filter small blocks')
+parser.add_argument('--temporal_scope'
+	               , type=int
+	               , default=1, help='limit the temporal scope when computing jaccard index between node groups; unlimited scope is -1')
+parser.add_argument('--similarity_threshold'
+	               , type=float
+	               , default=0.1, help='filter pointless inter-temporal similarity edges before embedding')
+parser.add_argument('--group_size'
+	               , type=int
+	               , default=-1, help='filter small node groups; no filter is -1')
+parser.add_argument('--grouping_strategy'
+	               , choices=['sbm','node_label','louvain']
+	               , default='sbm', help='choose a strategy to group individual nodes')
+parser.add_argument('--group_metadata_strategy'
+	               , choices=['majority','most_frequent']
+	               , default=['majority'], help='choose a strategy to aggregate individual metadata at the node groups level')
+parser.add_argument('--group_label_strategy'
+	               , choices=['random','most_central']
+	               , default='most_central', help='choose a strategy to label node groups')
 
 args = parser.parse_args()
 
@@ -101,11 +111,11 @@ def toEdgeFile(file,s,t,w,phase,edge_type,component_id) :
 output_edges = open("./" + graph_name + "_edges.csv", "w")
 output_edges.write("source,target,weight,phase,type,sync_component\n")	
 
-def toBlockFile(file,b_id,phase,size,sync_component_id,diac_component_id,lineage_size,meta,x,y,z) :
-	file.write(b_id + ',' + phase + ',' + size + ',' + sync_component_id +',' + diac_component_id + ',' + lineage_size + ',' + meta + ',' + x + ',' + y + ',' + z + '\n')	
+def toBlockFile(file,b_id,phase,size,sync_component_id,diac_component_id,lineage_size,meta,label,x,y,z) :
+	file.write(b_id + ',' + phase + ',' + size + ',' + sync_component_id +',' + diac_component_id + ',' + lineage_size + ',' + meta + ',' + label + ',' + x + ',' + y + ',' + z + '\n')	
 
 output_blocks = open("./" + graph_name + "_blocks.csv", "w")
-output_blocks.write("id,phase,size,sync_component,diac_component,lineage_size,meta,x,y,z\n")
+output_blocks.write("id,phase,size,sync_component,diac_component,lineage_size,meta,label,x,y,z\n")
 
 
 ####
@@ -184,6 +194,12 @@ def connectedComponents (components,cur,graph) :
 def getVertexId (snapshot,v) :
 	with suppress(KeyError): return snapshot.vp.vid[v]
 
+def getVertex (snapshot,target_id) :
+	for v in snapshot.vertices() :
+		v_id = getVertexId(snapshot,v)
+		if v_id == target_id :
+			return v
+
 def getVertexMetaType (snapshot,v) :
 	try:
 		return snapshot.vp.vmeta.value_type()
@@ -196,15 +212,63 @@ def getVertexMeta (snapshot,v) :
 	except Exception as e:
 		return 'NA'
 
+def getVertexLabel (snapshot,v) :
+	try:
+		return str(snapshot.vp.vlabel[v])
+	except Exception as e:
+		return str(snapshot.vp.vid[v])
+
+def snapshotToPartitionSBM (snapshot) :
+	# use the sbm method to create node groups
+	return gt.minimize_blockmodel_dl(snapshot, state_args=dict(deg_corr=True,recs=[snapshot.ep.weight],rec_types=["discrete-geometric"]))
+
+def snapshotToPartitionLouvain (snapshot) :
+	# use the louvain method to create node groups
+	gx = nx.Graph()
+	for v in snapshot.vertices() :
+		v_id = getVertexId(snapshot,v)
+		gx.add_node(v_id)
+	for e in snapshot.edges():
+		s = snapshot.vp.vid[e.source()]
+		t = snapshot.vp.vid[e.target()]
+		gx.add_edge(s, t)
+	partitions = community_louvain.best_partition(gx)	
+	vlouvain = snapshot.new_vertex_property("int")
+	snapshot.vp.vlouvain = vlouvain
+	for v in snapshot.vertices() :
+		v_id = getVertexId(snapshot,v)
+		snapshot.vp.vlouvain[v] = partitions[v_id]
+	node_grouping_labels = snapshot.vp.vlouvain
+	state = gt.BlockState(snapshot)
+	state.set_state(node_grouping_labels)
+	return state	
+
+def snapshotToPartitionLabel (snapshot) :
+	# use existing node label to create node groups
+	node_grouping_labels = snapshot.vp.vgroup
+	state = gt.BlockState(snapshot)
+	state.set_state(node_grouping_labels)
+	return state
+
+def snapshotToPartition (snapshot,strategy) :
+	# select the grouping strategy
+	if   strategy == "sbm" :
+		return snapshotToPartitionSBM(snapshot)
+	elif strategy == "node_label":
+		return snapshotToPartitionLabel(snapshot)
+	elif strategy == "louvain":
+		return snapshotToPartitionLouvain(snapshot)		
+
 phases = []
 blocks_to_meta = {}
+blocks_to_label = {}
 blocks_to_synchronic_components = {}
 sequence_of_blocks = {}
 flow_size = {}
 
 for snapshot in snapshots :
 
-	# inferring partition and meta-graph with sbm
+	# inferring a partition from a snapshot
 
 	phase = getGraphPhase(snapshot)
 	phases.append(phase)
@@ -213,7 +277,7 @@ for snapshot in snapshots :
 	print(phase)
 	print(snapshot)
 
-	partition = gt.minimize_blockmodel_dl(snapshot)
+	partition = snapshotToPartition(snapshot,args.grouping_strategy)
 
 	blocks = {}
 
@@ -222,28 +286,23 @@ for snapshot in snapshots :
 		# [block] 1) aggregate the vertices at the block level
 
 		v_id   = getVertexId(snapshot,v)
+		
 		v_meta_type = getVertexMetaType(snapshot,v)
 		v_meta = getVertexMeta(snapshot,v)
-		
+
 		b_id = str(partition.get_blocks()[v]) + "_" + phase
 
 		if b_id in blocks.keys() :
 			blocks[b_id].append(v_id)
-			if "vector" in v_meta_type :
-				blocks_to_meta[b_id] = blocks_to_meta[b_id] + list(v_meta)
-			else :	
-				blocks_to_meta[b_id].append(v_meta)
+			blocks_to_meta[b_id].append(v_meta)
 		else :
 			blocks[b_id] = [v_id]
-			if "vector" in v_meta_type :
-				blocks_to_meta[b_id] = list(v_meta)
-			else :
-				blocks_to_meta[b_id] = [v_meta]
+			blocks_to_meta[b_id] = [v_meta]
 
 	# [block] 2) maybe filter the small blocks
 
-	if args.block_size[0] > 0 :
-		blocks = {k: v for k, v in blocks.items() if len(v) > args.block_size[0]}
+	if args.group_size > 0 :
+		blocks = {k: v for k, v in blocks.items() if len(v) > args.group_size}
 
 	for b_id in blocks.keys() :	
 		sequence_of_blocks[b_id] = blocks[b_id]
@@ -259,7 +318,30 @@ for snapshot in snapshots :
 				# we use a simple most frequent strategy
 				freq_max = labels.count(label)
 				most_freq_label = label
-		blocks_to_meta[b_id] = most_freq_label				
+		if args.group_metadata_strategy == "most_frequent" :
+			blocks_to_meta[b_id] = most_freq_label
+		if args.group_metadata_strategy == "majority" : 
+			if freq_max > (len(labels) / 2) :
+				blocks_to_meta[b_id] = most_freq_label
+			else :
+				blocks_to_meta[b_id] = 'mixed'
+
+	# [label] set a label to each block
+
+	for b_id in blocks.keys() :
+		if   (args.group_label_strategy == "random") :
+			fst = getVertex(snapshot,blocks[b_id][0])
+			blocks_to_label[b_id] = getVertexLabel(snapshot,fst)
+		elif (args.group_label_strategy == "most_central") :
+			gf = gt.GraphView(snapshot, vfilt=lambda v: v not in blocks[b_id])
+			centrality,ep = gt.betweenness(gf)
+			most_central_label = ''
+			betweenness_max = 0
+			for v in gf.vertices() :
+				if centrality[v] > betweenness_max :
+					betweenness_max = centrality[v]
+					most_central_label = getVertexLabel(gf,v)
+			blocks_to_label[b_id] = most_central_label
 
 	# set up edges for embedding
 	
@@ -366,7 +448,7 @@ for bi in sequence_of_blocks.keys() :
 
 			# [diac_edges] 1) put the (t-1,t) inter-temporal edges aside to compute the inter-temporal lineages 
 			
-			if (sim >= args.threshold[0]) :
+			if (sim >= args.similarity_threshold) :
 				# these edges will be the only visible in the interface 
 				diac_edges[(bi,bj)] = {'w':sim,'shhi':0}
 
@@ -416,10 +498,10 @@ print('\nembed the sequence of meta-graphs')
 def areInScope(bi_t,bj_t) :
 	bi_t_idx = phases.index(bi_t)
 	bj_t_idx = phases.index(bj_t)
-	if (args.scope[0] < 0) :
+	if (args.temporal_scope < 0) :
 		return True
 	else :
-		return (abs(bi_t_idx - bj_t_idx) <= args.scope[0])
+		return (abs(bi_t_idx - bj_t_idx) <= args.temporal_scope)
 
 mat = np.array(mat)
 b_ids = list(sequence_of_blocks.keys())
@@ -518,6 +600,7 @@ for i in range(len(embedding.wv.index_to_key)) :
 		      , str(diac_component_id)
 		      , str(lineage_size)
 		      , blocks_to_meta[block]
+		      , blocks_to_label[block]		      
 		      , str(xs[i])
 		      , str(ys[i])
 		      , str(zs[i]))		
