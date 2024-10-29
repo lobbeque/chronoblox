@@ -15,7 +15,7 @@ function drawRoundedShape(points,r,canvas,z) {
 
   /*
    * we use the rounded shape method from :
-   * https://www.gorillasun.de/blog/an-algorithm-for-polygons-with-rounded-corners/
+   * https://www.gorillasun.de/blog/an-algorithm-for-shapeBs-with-rounded-corners/
    * we just add re-scaling factor
    */
 
@@ -177,4 +177,94 @@ function filterEdges(alpha) {
       }
     })
   })
+}
+
+
+
+function mergeHulls(shapes) {
+  let toBeMerged = [];
+  for (var a = shapes.length - 1; a >= 0; a--) {
+    for (var b = shapes.length - 1; b >= 0; b--) {
+      if (a > b) {
+        shapeA = getHull(shapes[a],40)
+        shapeB = getHull(shapes[b],40)
+        if (doesIntersect(shapeA,shapeB)) {
+          toBeMerged = [a,b]
+          continue;
+        } else if (isInside(shapeA,shapeB)) {
+          toBeMerged = [a,b]
+          continue;
+        } else if (isInside(shapeB,shapeA)) {
+           toBeMerged = [a,b]
+          continue;         
+        }
+      }
+    }
+  }
+  if (toBeMerged.length > 0) {
+    let newShape = shapes[toBeMerged[0]].concat(shapes[toBeMerged[1]])
+    shapes[toBeMerged[0]] = newShape
+    delete shapes[toBeMerged[1]]
+    shapes = shapes.filter(n => n)
+    return mergeHulls(shapes)
+  } else {
+    return shapes
+  }
+}
+
+function doesIntersect(shapeA, shapeB) {
+  // Check if any line segment of shapeA intersects with any line segment of shapeB
+  for (let i = 0; i < shapeA.length; i++) {
+    let j = (i + 1) % shapeA.length;
+    for (let k = 0; k < shapeB.length; k++) {
+      let l = (k + 1) % shapeB.length;
+      if (doSegmentsIntersect(shapeA[i], shapeA[j], shapeB[k], shapeB[l])) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function doSegmentsIntersect(p1, p2, p3, p4) {
+  // Check if line segments p1, p2 and p3, p4 intersect
+  let d1 = direction(p3, p4, p1);
+  let d2 = direction(p3, p4, p2);
+  let d3 = direction(p1, p2, p3);
+  let d4 = direction(p1, p2, p4);
+  return (d1 != d2 && d3 != d4 && d1 != 0 && d2 != 0 && d3 != 0 && d4 != 0);
+}
+
+function direction(p1, p2, p3) {
+  // Calculate the direction of the cross product (p3 - p1) x (p2 - p1)
+  let val = (p2.y - p1.y) * (p3.x - p2.x) - (p2.x - p1.x) * (p3.y - p2.y);
+  if (val == 0) {
+    return 0; // Collinear points
+  } else if (val < 0) {
+    return 1; // Clockwise direction
+  } else {
+    return 2; // Counterclockwise direction
+  }
+}
+
+function isInside(shapeA, shapeB) {
+  let count = 0;
+  for (let i = 0; i < shapeA.length; i++) {
+    let isInside = false;
+    let testPoint = shapeA[i];
+    for (let j = 0, k = shapeB.length - 1; j < shapeB.length; k = j++) {
+      let pj = shapeB[j];
+      let pk = shapeB[k];
+      if (
+        ((pj.y > testPoint.y) != (pk.y > testPoint.y)) &&
+        (testPoint.x < ((pk.x - pj.x) * (testPoint.y - pj.y)) / (pk.y - pj.y) + pj.x)
+      ) {
+        isInside = !isInside;
+      }
+    }
+    if (isInside) {
+      count++;
+    }
+  }
+  return count === shapeA.length;
 }

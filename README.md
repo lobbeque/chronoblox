@@ -95,6 +95,14 @@ Replace the default blocks and edges paths with your own paths and files produce
 ```
 Then open the file `chronoblox.html` in your web browser.
 
+## Funding
+
+The research that was conducted to create the first version of this tool was funded by CNRS and the ERC Consolidator Grant [Socsemics](https://socsemics.huma-num.fr/) (grant #772743).
+
+<div><img width="300" src="https://github.com/lobbeque/chronoblox/blob/master/images/socsemics.png"></div>
+
+
+
 
 
 
