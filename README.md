@@ -4,7 +4,7 @@
 
 ![Layout](https://img.shields.io/badge/Layout-Python-informational?style=flat&logo=python&color=6144b3)&nbsp;&nbsp;![Interface](https://img.shields.io/badge/Interface-Javascript-informational?style=flat&logo=javascript&color=6144b3)&nbsp;&nbsp;
 
-Chronoblox performs the chronophotography of a sequence of graph snapshots by fitting them into a single embedding space common to all time periods.Chronoblox is dynamic graph drawing layout that comes with a visualization interface.
+Chronoblox performs the chronophotography of a sequence of graph snapshots by fitting them into a single embedding space common to all time periods. Chronoblox is dynamic graph drawing layout that comes with a visualization interface.
 
 Since this project is still in development, this document remains in progress.
 
