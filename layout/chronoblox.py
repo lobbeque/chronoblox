@@ -2,7 +2,7 @@
 # chronoblox.py
 # description : Chronoblox performs the chronophotography of a sequence of snapshots
 # licence : AGPL + CECILL v3
-# paper :  
+# paper : https://arxiv.org/abs/2405.07506
 #######
 
 # conda activate gt
