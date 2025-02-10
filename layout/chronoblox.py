@@ -2,7 +2,7 @@
 # chronoblox.py
 # description : Chronoblox performs the chronophotography of a sequence of snapshots
 # licence : AGPL + CECILL v3
-# paper :  
+# paper : https://arxiv.org/abs/2405.07506
 #######
 
 # conda activate gt
@@ -23,6 +23,10 @@ import numpy as np
 import pacmap
 import networkx as nx
 import math
+import pickle
+import random
+import sys
+from datetime import datetime
 
 from gensim.models import Word2Vec
 from sklearn.decomposition import PCA
@@ -40,6 +44,9 @@ parser = argparse.ArgumentParser( description='Process the chronophotography of 
 parser.add_argument('--snapshots'
 				   , nargs=1
 				   , default='board_directors', help='path to the snapshots (default: load the board_directors data set)')
+parser.add_argument('--network_type'
+				   , nargs=1
+				   , default='real', help='set the nature of the network : real or synthetic')
 parser.add_argument('--temporal_scope'
 	               , type=int
 	               , default=1, help='limit the temporal scope when computing jaccard index between node groups; unlimited scope is -1')
@@ -56,7 +63,7 @@ parser.add_argument('--group_size'
 	               , type=int
 	               , default=-1, help='filter small node groups; no filter is -1')
 parser.add_argument('--group_metadata_strategy'
-	               , choices=['majority','most_frequent']
+	               , choices=['majority','most_frequent','mean']
 	               , default=['majority'], help='choose a strategy to aggregate individual metadata at the node groups level')
 parser.add_argument('--group_label_strategy'
 	               , choices=['most_frequent','most_central']
@@ -71,10 +78,27 @@ args = parser.parse_args()
 
 
 def getGraphPhase(snapshot) :
-	with suppress(KeyError): return snapshot.gp["phase"]
+	if args.network_type[0] == "real" :
+		# real snapshots	
+		date_str = (snapshot.gp["timestamp"][0]).split('-')
+		date  = datetime(int(date_str[0]), int(date_str[1]), int(date_str[2]), 0, 0)
+		epoch = date.timestamp()
+		return str(int(epoch))
+		# with suppress(KeyError): return 
+		# return str(snapshots.index(snapshot))
+	else :
+		# synthetic snapshots
+		return str(snapshots.index(snapshot))
+
 
 def getGraphName(snapshot) :
-	with suppress(KeyError): return snapshot.gp["name"]
+	if args.network_type[0] == "real" :	
+		# real snapshots
+		with suppress(KeyError): return snapshot.gp["hashtag"]
+	else :
+		# synthetic snapshots
+		name = (args.snapshots[0].split("/")[-1]).split(".")[0]
+		return name
 
 def loadSnapshot(path) :
 	return gt.load_graph(path)
@@ -85,10 +109,23 @@ graph_name = ""
 if args.snapshots != "board_directors" :
 	# load your own snapshots
 	print("\nloading your own snapshots ...")
-	paths = glob.glob(args.snapshots[0] + "*.gt")
-	snapshots = list(map(lambda p: loadSnapshot(p), paths))
-	snapshots.sort(key=getGraphPhase)
-	graph_name = getGraphName(snapshots[0])
+	if args.network_type == "real" :
+		# real snapshots
+		paths = glob.glob(args.snapshots[0] + "*.gt")
+		snapshots = list(map(lambda p: loadSnapshot(p), paths))
+		snapshots.sort(key=getGraphPhase)
+	else :
+		# synthetic snapshots
+		raw_data = {}
+		with (open(args.snapshots[0], "rb")) as data:
+			while True:
+				try:
+					raw_data = pickle.load(data)
+				except EOFError:
+					break
+		for snapshot in raw_data.values() :
+			snapshots.append(snapshot)
+	graph_name = getGraphName(snapshots[0])					
 	print("\nsnapshots loaded")
 else :
 	# load the board_directors data set
@@ -104,11 +141,9 @@ else :
 	graph_name = "board_directors"
 	print("\nboard_directors loaded")
 
-
 ####
 ## output files
 #### 
-
 
 def toEdgeFile(file,s,t,w,phase,edge_type,component_id) :
 	file.write(s + ',' + t + ',' + w + ',' + phase  + ',' + edge_type + ',' + component_id + '\n')
@@ -117,7 +152,7 @@ output_edges = open("./" + graph_name + "_" + args.grouping_strategy + "_edges.c
 output_edges.write("source,target,weight,phase,type,sync_component\n")	
 
 def toBlockFile(file,b_id,phase,size,sync_component_id,diac_component_id,lineage_size,meta,label,x,y,z) :
-	file.write(b_id + ',' + phase + ',' + size + ',' + sync_component_id +',' + diac_component_id + ',' + lineage_size + ',' + meta + ',' + label + ',' + x + ',' + y + ',' + z + '\n')	
+	file.write(b_id + ',' + phase + ',' + size + ',' + sync_component_id +',' + diac_component_id + ',' + lineage_size + ',' + str(meta) + ',' + label + ',' + x + ',' + y + ',' + z + '\n')	
 
 output_blocks = open("./" + graph_name + "_" + args.grouping_strategy + "_blocks.csv", "w")
 output_blocks.write("id,phase,size,sync_component,diac_component,lineage_size,meta,label,x,y,z\n")
@@ -217,7 +252,10 @@ def connectedComponents (components,cur,graph) :
 
 
 def getVertexId (snapshot,v) :
-	with suppress(KeyError): return snapshot.vp.vid[v]
+	if args.network_type[0] == "real" :
+		return str(v)
+	else :
+		return str(v)
 
 def getVertexVector (snapshot,v) :
 	with suppress(KeyError): return snapshot.vp.vgroup[v]
@@ -239,15 +277,18 @@ def getVertexMetaType (snapshot,v) :
 
 def getVertexMeta (snapshot,v) :
 	try:
-		return snapshot.vp.vmeta[v]
+		return snapshot.vp.ip_values[v]
 	except Exception as e:
 		return 'NA'
 
 def getVertexLabel (snapshot,v) :
-	try:
-		return str(snapshot.vp.vlabel[v])
-	except Exception as e:
-		return str(snapshot.vp.vid[v])
+	if args.network_type == "real" :	
+		try:
+			return str(snapshot.vp.vlabel[v])
+		except Exception as e:
+			return str(snapshot.vp.vid[v])
+	else :
+		return str(v)
 
 def snapshotToSBMPartitions (snapshot) :
 	# use the sbm method to create node groups
@@ -276,7 +317,8 @@ def snapshotToLouvainPartitions (snapshot) :
 
 def snapshotToLabelPartitions (snapshot) :
 	# use existing node labels to create node groups
-	node_grouping_labels = snapshot.vp.vgroup
+	# node_grouping_labels = snapshot.vp.blocks_top_level
+	node_grouping_labels = snapshot.vp.blocks_low_level
 	state = gt.BlockState(snapshot)
 	state.set_state(node_grouping_labels)
 	return state
@@ -319,7 +361,8 @@ for snapshot in snapshots :
 	print(phase)
 	print(snapshot)
 
-	partition = snapshotToPartition(snapshot,args.grouping_strategy)
+	if args.network_type[0] == "real" :
+		partition = snapshotToPartition(snapshot,args.grouping_strategy)
 
 	blocks = {}
 
@@ -332,7 +375,12 @@ for snapshot in snapshots :
 		v_label = getVertexLabel(snapshot,v)
 		v_root_label = v_label
 
-		b_id = str(partition.get_blocks()[v]) + "_" + phase
+		if args.network_type[0] == "real" :
+			b_id = str(partition.get_blocks()[v]) + "_" + phase
+		else :
+			if snapshot.vp.blocklabel[v] == 99 :
+				continue
+			b_id = str(snapshot.vp.blocklabel[v]) + "_" + phase
 
 		if args.grouping_strategy == "none" : 
 			vertex_to_vector[b_id] = getVertexVector(snapshot,v)
@@ -369,20 +417,23 @@ for snapshot in snapshots :
 	else :
 		for b_id in blocks.keys() :	
 			metas = blocks_to_meta[b_id]
-			freq_max = 0
-			most_freq_meta = ''
-			for meta in metas :
-				if (metas.count(meta) > freq_max) :
-					# we use a simple most frequent strategy
-					freq_max = metas.count(meta)
-					most_freq_metal = meta
-			if (args.group_metadata_strategy == "most_frequent") :
-				blocks_to_meta[b_id] = most_freq_meta
-			if (args.group_metadata_strategy == "majority") : 
-				if freq_max > (len(metas) / 2) :
+			if (args.group_metadata_strategy == "mean") :
+				blocks_to_meta[b_id] = sum(metas) / len(metas)
+			else :
+				freq_max = 0
+				most_freq_meta = ''
+				for meta in metas :
+					if (metas.count(meta) > freq_max) :
+						# we use a simple most frequent strategy
+						freq_max = metas.count(meta)
+						most_freq_metal = meta
+				if (args.group_metadata_strategy == "most_frequent") :
 					blocks_to_meta[b_id] = most_freq_meta
-				else :
-					blocks_to_meta[b_id] = "mixed"
+				if (args.group_metadata_strategy == "majority") : 
+					if freq_max > (len(metas) / 2) :
+						blocks_to_meta[b_id] = most_freq_meta
+					else :
+						blocks_to_meta[b_id] = "mixed"
 
 	# [label] set a label to each block
 
@@ -411,54 +462,86 @@ for snapshot in snapshots :
 			blocks_to_label[b_id] = most_central_label
 
 	# set up edges for embedding
-	
-	print(str(len(blocks.keys())) + ' blocks')
 
-	meta_graph  = partition.get_bg()
-	sync_matrix = partition.get_matrix().toarray()
+	if args.network_type[0] == "real" :
+		meta_graph  = partition.get_bg()
+		sync_matrix = partition.get_matrix().toarray()
 
 	# [sync_edges] 1) get intra-temporal edges
 
 	sync_edges = {}
 	
-	for e in meta_graph.edges() :
-		s = meta_graph.vertex_index[e.source()]
-		t = meta_graph.vertex_index[e.target()]
-		# remove self edge
-		if (s == t) or (sync_matrix[s][t] == 0):
-			continue
-		# ensure that edges are undirected
-		edge = [str(s) + "_" + phase, str(t) + "_" + phase]
-		edge.sort()
-		edge = tuple(edge)
-		w = sync_matrix[s][t]
-		if edge in sync_edges.keys() :
-			sync_edges[edge]['w'] += w
-		else :
-			sync_edges[edge] = {'w':w,'shhi':0} 
+	if args.network_type[0] == "real" :
+		for e in meta_graph.edges() :
+			s = meta_graph.vertex_index[e.source()]
+			t = meta_graph.vertex_index[e.target()]
+			# remove self edge
+			if (s == t) or (sync_matrix[s][t] == 0):
+				continue
+			# ensure that edges are undirected
+			edge = [str(s) + "_" + phase, str(t) + "_" + phase]
+			edge.sort()
+			edge = tuple(edge)
+			w = sync_matrix[s][t]
+			if edge in sync_edges.keys() :
+				sync_edges[edge]['w'] += w
+			else :
+				sync_edges[edge] = {'w':w,'shhi':0}
+	else :
+		for e in snapshot.edges() : 
+			# s = snapshot.vp.blocks_top_level[e.source()]
+			# t = snapshot.vp.blocks_top_level[e.target()]
+
+			s = snapshot.vp.blocks_low_level[e.source()]
+			t = snapshot.vp.blocks_low_level[e.target()]
+			
+			if (s == 99) or (t == 99) or (s == t) :
+				continue
+			if (s,t) not in sync_edges :
+				sync_edges[(s,t)] = 1
+			else :
+				sync_edges[(s,t)] += 1
 
 	# [sync_edges] 2) filter the intra-temporal edges by using a sHHI
 	
 	# https://en.wikipedia.org/wiki/Herfindahl%E2%80%93Hirschman_index
 
-	grouped_sync_edges = groupEdges(sync_edges)		
+	if args.network_type[0] == "real" :
+		grouped_sync_edges = groupEdges(sync_edges)		
+		for edges in grouped_sync_edges :
+			filtered_edges = hhiFilter(edges)
+			for edge in filtered_edges :
+				sync_edges[(edge[0],edge[1])]["shhi"] += 1
+	else :
+		grouped_sync_edges = {}
+		for sync_edge in sync_edges.keys() :
+			s = sync_edge[0]
+			t = sync_edge[1]
+			w = sync_edges[sync_edge]
+			if (t,s) in grouped_sync_edges.keys() :
+				grouped_sync_edges[(t,s)]["weight"] += w
+			else :
+				grouped_sync_edges[(s,t)] = {"weight":w}		
 
-	for edges in grouped_sync_edges :
-		filtered_edges = hhiFilter(edges)
-		for edge in filtered_edges :
-			sync_edges[(edge[0],edge[1])]["shhi"] += 1
-
-	# [sync_edges] 3) export the intra-temporal edges	
+	# [sync_edges] 3) export the intra-temporal edges		
 
 	sync_edges_list = []	
-
-	for edge in sync_edges.keys() :
-		if (sync_edges[edge]["shhi"] != 2) or (args.hhi_filter == "false") :
-			# each edge must satisfy the sHHI test
-			continue
-		sync_edges_list.append([edge[0],edge[1]])
-		# then we export the intra-temporal edges
-		toEdgeFile(output_edges,str(edge[0]),str(edge[1]),str(sync_edges[edge]["w"]),phase,'sync','-1')
+	if args.network_type[0] == "real" :
+		for edge in sync_edges.keys() :
+			if (sync_edges[edge]["shhi"] != 2) or (args.hhi_filter == "false") :
+				# each edge must satisfy the sHHI test
+				continue
+			sync_edges_list.append([edge[0],edge[1]])
+			# then we export the intra-temporal edges
+			toEdgeFile(output_edges,str(edge[0]),str(edge[1]),str(sync_edges[edge]["w"]),phase,'sync','-1')
+	else :
+		for sync_edge in grouped_sync_edges.keys() :
+			sync_edges_list.append([sync_edge[0],sync_edge[1]])	
+			s = str(sync_edge[0]) + "_" + phase
+			t = str(sync_edge[1]) + "_" + phase
+			w = grouped_sync_edges[sync_edge]["weight"]
+			toEdgeFile(output_edges,str(s),str(t),str(w),phase,'sync','-1')		
+				
 
 	# [sync_edges] 4) find synchronic connected components
 
@@ -503,6 +586,7 @@ for bi in sequence_of_blocks.keys() :
 	
 	row = []
 	bi_t = bi.split('_')[1]
+	bi_name = bi.split('_')[0]
 	bi_v = sequence_of_blocks[bi]
 	
 	for bj in sequence_of_blocks.keys() :
@@ -510,12 +594,13 @@ for bi in sequence_of_blocks.keys() :
 		# [matrix] 1) for each inter-temporal pair of blocks 
 		
 		bj_t = bj.split('_')[1]
+		bj_name = bj.split('_')[0]		
 		bj_v = sequence_of_blocks[bj]
 		
 		# [matrix] 2) populate the similarity matrix 
-
+		
 		sim = 0
-
+		
 		if args.grouping_strategy == "none" :
 			if len(vertex_to_vector[bi]) > 2 :
 				sim = cosine(vertex_to_vector[bi],vertex_to_vector[bj])
@@ -524,6 +609,7 @@ for bi in sequence_of_blocks.keys() :
 				# sim = euclidianDistance(vertex_to_vector[bi],vertex_to_vector[bj])
 		else :
 			sim = jaccard(bi_v,bj_v)
+
 		
 		row.append(sim)
 		
@@ -607,21 +693,21 @@ inter_temporal_edges = []
 for i in range(len(mat)) :
 	for j in range(i,len(mat)) :
 		if j != i :
-			if mat[i][j] > 0 :
+			if mat[i][j] > 0.3 :
 				bi = b_ids[i]
 				bi_t = bi.split('_')[1]
 				bj = b_ids[j]
 				bj_t = bj.split('_')[1]
 				# scope can be limited here
 				if (areInScope(bi_t,bj_t)) :
-					inter_temporal_edges.append((bi,bj,mat[i][j]))
+					inter_temporal_edges.append((bi,bj,mat[i][j]))							
 
 inter_temporal_graph.add_weighted_edges_from(inter_temporal_edges)
 
 # [embedding] 2) embed the inter_temporal_graph via node2vec
 
-node2vec = Node2Vec(inter_temporal_graph, dimensions=20, walk_length=16, num_walks=100)
-embedding = node2vec.fit(window=10, min_count=1)
+node2vec = Node2Vec(inter_temporal_graph, weight_key='weight')
+embedding = node2vec.fit(window=50)
 
 ####
 ## [chronophotographic projection]
@@ -632,7 +718,7 @@ print('\nproject the embedding with pacmap ...')
 
 # [projection] 1) use PaCMAP to project the embedding on 2D visualization space
 
-projector = pacmap.PaCMAP(n_components=2, n_neighbors=None, MN_ratio=0.5, FP_ratio=2.0) 
+projector = pacmap.PaCMAP(n_components=2, n_neighbors=15, MN_ratio=0.5, FP_ratio=2.0) 
 projection_2D = projector.fit_transform(embedding.wv.vectors, init="pca")
 
 xs = projection_2D[:, 0]
@@ -685,7 +771,7 @@ for i in range(len(embedding.wv.index_to_key)) :
 	# [blocks] 3) find the corresponding diachronic component
 	
 	if (block in flow_size) :
-		lineage_size = flow_size[block]		
+		lineage_size = flow_size[block]	
 
 	toBlockFile(output_blocks
 		      , block
