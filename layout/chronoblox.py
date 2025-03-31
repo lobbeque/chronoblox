@@ -24,7 +24,6 @@ import pacmap
 import networkx as nx
 import math
 
-from gensim.models import Word2Vec
 from sklearn.decomposition import PCA
 from community import community_louvain
 
