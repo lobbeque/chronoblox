@@ -142,11 +142,11 @@ def toEdgeFile(file,s,t,w,phase,edge_type,component_id) :
 output_edges = open("./" + graph_name + "_" + args.grouping_strategy + "_edges.csv", "w")
 output_edges.write("source,target,weight,phase,type,sync_component\n")	
 
-def toBlockFile(file,b_id,phase,size,sync_component_id,diac_component_id,lineage_size,meta,label,x,y,z) :
-	file.write(b_id + ',' + phase + ',' + size + ',' + sync_component_id +',' + diac_component_id + ',' + lineage_size + ',' + str(meta) + ',' + label + ',' + x + ',' + y + ',' + z + '\n')	
+def toBlockFile(file,b_id,phase,size,sync_component_id,diac_component_id,lineage_size,meta,label,x,y) :
+	file.write(b_id + ',' + phase + ',' + size + ',' + sync_component_id +',' + diac_component_id + ',' + lineage_size + ',' + str(meta) + ',' + label + ',' + x + ',' + y + '\n')	
 
 output_blocks = open("./" + graph_name + "_" + args.grouping_strategy + "_blocks.csv", "w")
-output_blocks.write("id,phase,size,sync_component,diac_component,lineage_size,meta,label,x,y,z\n")
+output_blocks.write("id,phase,size,sync_component,diac_component,lineage_size,meta,label,x,y\n")
 
 
 ####
@@ -478,10 +478,8 @@ for snapshot in snapshots :
 	else :
 		for e in snapshot.edges() : 
 
-			print(snapshot.vp)
-
-			s = snapshot.vp.blocks_low_level[e.source()]
-			t = snapshot.vp.blocks_low_level[e.target()]
+			s = snapshot.vp.blocklabel[e.source()]
+			t = snapshot.vp.blocklabel[e.target()]
 			
 			if (s == 99) or (t == 99) or (s == t) :
 				continue
@@ -552,14 +550,6 @@ temporal_gap = int(phases[1]) - int(phases[0])
 
 print('\nbuild the inter-temporal similarity matrix')
 
-def areInScope(bi_t,bj_t) :
-	bi_t_idx = phases.index(bi_t)
-	bj_t_idx = phases.index(bj_t)
-	if (args.temporal_scope < 0) :
-		return True
-	else :
-		return (abs(bi_t_idx - bj_t_idx) <= args.temporal_scope)
-
 blocks_to_diachronic_components = {}
 filtered_diac_edges    = {}
 best_in_out_diac_edges = {}
@@ -611,7 +601,7 @@ for bi in sequence_of_blocks.keys() :
 
 			# [diac_edges] 1) put the (t-1,t) inter-temporal edges aside to compute the inter-temporal lineages 
 			
-			if (sim >= args.similarity_threshold) :
+			if (sim >= 0.1) :
 				# these edges will be the only visible in the interface 
 				filtered_diac_edges[(bi,bj)] = {'w':sim,'shhi':0}
 
@@ -666,6 +656,11 @@ else :
 ## [chronophotographic projection]
 ####
 
+def areInScope(bi_t,bj_t) :
+	bi_t_idx = phases.index(bi_t)
+	bj_t_idx = phases.index(bj_t)
+	return (abs(bi_t_idx - bj_t_idx) <= 2)
+
 print('\nembed and project the matrix with pacmap ...')	
 
 # 1) prepare the matrix
@@ -677,11 +672,17 @@ output_matrix = open("./" + graph_name + "_matrix.csv", "w")
 output_matrix.write("source,target,weight\n")
 
 for i in range(len(mat)) :
-	bi   = b_ids[i]	
+	bi = b_ids[i]	
+	bi_t = bi.split('_')[1]
 	vector = []
 	for j in range(len(mat)) :
 		bj = b_ids[j]
-		vector.append(mat[i][j])
+		bj_t = bj.split('_')[1]
+		if (areInScope(bi_t,bj_t)) :
+			vector.append(mat[i][j])
+		else :
+			vector.append(0)
+		
 		output_matrix.write(bi + ',' + bj + ',' + str(mat[i][j]) + '\n')
 	vectors.append(vector)
 
@@ -709,13 +710,14 @@ for i in range(len(mat)) :
 		else :
 			vector_pruned.append(0)
 			output_matrix_pruned.write(bi + ',' + bj + ',' + str(0) + '\n')
-	vectors[i] = vector_pruned
+	# vectors[i] = vector_pruned
 
 vectors = np.array(vectors)	
 
 # 3) use PaCMAP to project the embedding on 2D visualization space
 
-projector = pacmap.PaCMAP(n_components=2, n_neighbors=7, MN_ratio=2, FP_ratio=0.1) 
+# projector = pacmap.PaCMAP(n_components=2, n_neighbors=7, MN_ratio=3, FP_ratio=0.1) 
+projector = pacmap.PaCMAP(n_components=2, n_neighbors=10, MN_ratio=0.5, FP_ratio=2) 
 projection_2D = projector.fit_transform(vectors, init="pca")
 
 xs = projection_2D[:, 0]
@@ -762,7 +764,6 @@ for i in range(len(vectors)) :
 		      , blocks_to_meta[block]
 		      , blocks_to_label[block]		      
 		      , str(xs[i])
-		      , str(ys[i])
-		      , str(zs[i]))		
+		      , str(ys[i]))		
 
 print('\nReady for visualization')
