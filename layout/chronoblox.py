@@ -47,15 +47,6 @@ parser.add_argument('--snapshots'
 parser.add_argument('--network_type'
 				   , nargs=1
 				   , default='real', help='set the nature of the network : real or synthetic')
-parser.add_argument('--temporal_scope'
-	               , type=int
-	               , default=1, help='limit the temporal scope when computing jaccard index between node groups; unlimited scope is -1')
-parser.add_argument('--similarity_threshold'
-	               , type=float
-	               , default=0.1, help='filter pointless inter-temporal similarity edges before embedding')
-parser.add_argument('--hhi_filter'
-	               , choices=['true','false']
-	               , default=['true'], help='filter pointless synchronic edges with a hhi filter')
 parser.add_argument('--grouping_strategy'
 	               , choices=['none','sbm','louvain','by_label']
 	               , default='none', help='choose a strategy to group individual nodes')
@@ -162,7 +153,6 @@ output_blocks.write("id,phase,size,sync_component,diac_component,lineage_size,me
 ## functions
 ####
 
-
 def groupEdges (edges) :
 	# group the edges by source and target
 	grouped = {}
@@ -180,7 +170,7 @@ def groupEdges (edges) :
 			grouped[t] = [[s,t,w,'in']]	
 	return grouped.values()	
 
-def hhiFilter(edges) :
+def hhiFilterEdges(edges) :
 	# compute the Herfindahl-Hirschman Index
 	si = functools.reduce(lambda acc,edge: acc + edge[2], edges, 0)
 	hhi = functools.reduce(lambda acc,edge: acc + (edge[2] / si)**2, edges, 0)
@@ -245,11 +235,9 @@ def connectedComponents (components,cur,graph) :
 		else :
 			return connectedComponents(components,list(set(cur + parts[0])),parts[1])	
 
-
 ####
 ## process the sequence of graph snapshots
 ####
-
 
 def getVertexId (snapshot,v) :
 	if args.network_type[0] == "real" :
@@ -489,8 +477,8 @@ for snapshot in snapshots :
 				sync_edges[edge] = {'w':w,'shhi':0}
 	else :
 		for e in snapshot.edges() : 
-			# s = snapshot.vp.blocks_top_level[e.source()]
-			# t = snapshot.vp.blocks_top_level[e.target()]
+
+			print(snapshot.vp)
 
 			s = snapshot.vp.blocks_low_level[e.source()]
 			t = snapshot.vp.blocks_low_level[e.target()]
@@ -509,7 +497,7 @@ for snapshot in snapshots :
 	if args.network_type[0] == "real" :
 		grouped_sync_edges = groupEdges(sync_edges)		
 		for edges in grouped_sync_edges :
-			filtered_edges = hhiFilter(edges)
+			filtered_edges = hhiFilterEdges(edges)
 			for edge in filtered_edges :
 				sync_edges[(edge[0],edge[1])]["shhi"] += 1
 	else :
@@ -528,7 +516,7 @@ for snapshot in snapshots :
 	sync_edges_list = []	
 	if args.network_type[0] == "real" :
 		for edge in sync_edges.keys() :
-			if (sync_edges[edge]["shhi"] != 2) or (args.hhi_filter == "false") :
+			if (sync_edges[edge]["shhi"] != 2) :
 				# each edge must satisfy the sHHI test
 				continue
 			sync_edges_list.append([edge[0],edge[1]])
@@ -634,7 +622,7 @@ for bi in sequence_of_blocks.keys() :
 filtered_grouped_diac_edges = groupEdges(filtered_diac_edges)
 
 for edges in filtered_grouped_diac_edges :
-	filtered_edges = hhiFilter(edges)
+	filtered_edges = hhiFilterEdges(edges)
 	for edge in filtered_edges :
 		filtered_diac_edges[(edge[0],edge[1])]["shhi"] += 1
 
@@ -674,81 +662,72 @@ else :
 			component_id = blocks_to_diachronic_components[edge[0]]
 			toEdgeFile(output_edges,edge[0],edge[1],str(filtered_diac_edges[edge]["w"]),edge[0].split('_')[1],'diac',str(component_id))
 
-
-####
-## embed the inter-temporal similarity matrix
-####
-
-
-print('\nembed the sequence of meta-graphs')
-
-mat = np.array(mat)
-b_ids = list(sequence_of_blocks.keys())
-
-# [embedding] 1) export the edges to a temporary file (mandatory by PecanPy)
-
-inter_temporal_graph = nx.Graph()
-inter_temporal_edges = []
-
-for i in range(len(mat)) :
-	for j in range(i,len(mat)) :
-		if j != i :
-			if mat[i][j] > 0.3 :
-				bi = b_ids[i]
-				bi_t = bi.split('_')[1]
-				bj = b_ids[j]
-				bj_t = bj.split('_')[1]
-				# scope can be limited here
-				if (areInScope(bi_t,bj_t)) :
-					inter_temporal_edges.append((bi,bj,mat[i][j]))							
-
-inter_temporal_graph.add_weighted_edges_from(inter_temporal_edges)
-
-# [embedding] 2) embed the inter_temporal_graph via node2vec
-
-node2vec = Node2Vec(inter_temporal_graph, weight_key='weight')
-embedding = node2vec.fit(window=50)
-
 ####
 ## [chronophotographic projection]
 ####
 
+print('\nembed and project the matrix with pacmap ...')	
 
-print('\nproject the embedding with pacmap ...')	
+# 1) prepare the matrix
 
-# [projection] 1) use PaCMAP to project the embedding on 2D visualization space
+b_ids = list(sequence_of_blocks.keys())
+vectors = []
 
-projector = pacmap.PaCMAP(n_components=2, n_neighbors=15, MN_ratio=0.5, FP_ratio=2.0) 
-projection_2D = projector.fit_transform(embedding.wv.vectors, init="pca")
+output_matrix = open("./" + graph_name + "_matrix.csv", "w")
+output_matrix.write("source,target,weight\n")
+
+for i in range(len(mat)) :
+	bi   = b_ids[i]	
+	vector = []
+	for j in range(len(mat)) :
+		bj = b_ids[j]
+		vector.append(mat[i][j])
+		output_matrix.write(bi + ',' + bj + ',' + str(mat[i][j]) + '\n')
+	vectors.append(vector)
+
+# 2) prune the matrix values with hhi
+
+def hhiFilterVector(vector) :
+	si = sum(vector)
+	hhi = functools.reduce(lambda acc,v: acc + (v / si)**2, vector, 0)
+	sorted_vector = sorted(vector,reverse=True)
+	idx = round(1/hhi)
+	return sorted_vector[idx]
+
+output_matrix_pruned = open("./" + graph_name + "_matrix_pruned.csv", "w")
+output_matrix_pruned.write("source,target,weight\n")
+
+for i in range(len(mat)) :
+	bi  = b_ids[i]
+	thr = hhiFilterVector(vectors[i])
+	vector_pruned = []
+	for j in range(len(mat)) :
+		bj = b_ids[j]
+		if vectors[i][j] > thr :
+			vector_pruned.append(vectors[i][j])
+			output_matrix_pruned.write(bi + ',' + bj + ',' + str(vectors[i][j]) + '\n')
+		else :
+			vector_pruned.append(0)
+			output_matrix_pruned.write(bi + ',' + bj + ',' + str(0) + '\n')
+	vectors[i] = vector_pruned
+
+vectors = np.array(vectors)	
+
+# 3) use PaCMAP to project the embedding on 2D visualization space
+
+projector = pacmap.PaCMAP(n_components=2, n_neighbors=7, MN_ratio=2, FP_ratio=0.1) 
+projection_2D = projector.fit_transform(vectors, init="pca")
 
 xs = projection_2D[:, 0]
 ys = projection_2D[:, 1]
-
-
-###
-# [PCA reduction]
-###
-
-
-print('\nreduce the 2D coordinates with PCA ...')
-
-# [projection] 2) use a PCA to reduce the 2D PaCMAP coordinates for building an alluvial chart
-
-pca = PCA(n_components=1)
-
-projection_1D = pca.fit_transform(projection_2D)
-
-zs = projection_1D[:, 0]
-
 
 ###
 # [export the blocks]
 ###
 
-for i in range(len(embedding.wv.index_to_key)) :
+for i in range(len(vectors)) :
 	
-	block = embedding.wv.index_to_key[i]
-
+	block = b_ids[i]
 	lineage_size = 0
 	diac_component_id = -1
 	sync_component_id = -1	
