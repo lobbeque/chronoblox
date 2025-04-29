@@ -337,6 +337,9 @@
 
       /*nodes = loadTable('../layout/chronoblox_scenario_graphs_5_sbm_blocks.csv','csv','header')
       edges = loadTable('../layout/chronoblox_scenario_graphs_5_sbm_edges.csv','csv','header')*/ 
+
+      nodes = loadTable('../layout/impact_investing_louvain_blocks.csv','csv','header')
+      edges = loadTable('../layout/impact_investing_louvain_edges.csv','csv','header')   
       
       
       neuekabel = loadFont('fonts/NeueKabel.otf');
@@ -372,6 +375,8 @@
       periods = nodes.getColumn('phase')
       periods = Array.from(new Set(periods))
       periods.sort()
+
+      print(periods)
 
       setupReadingDirection()
 
@@ -484,10 +489,12 @@
       let meta_domain = nodes.getColumn('meta')
       meta_domain = Array.from(new Set(meta_domain))
       meta_domain.sort(function (a,b) {return a-b;})
-      meta_domain = meta_domain.map((a) => parseFloat(a))
-      meta_domain = [meta_domain[0],0,meta_domain[meta_domain.length-1]]
-      metaColorScaleNight = d3.scaleDiverging(meta_domain,d3.interpolateRdBu)
-      metaColorScaleLight = metaColorScaleNight
+/*      meta_domain = meta_domain.map((a) => parseFloat(a))
+      meta_domain = [meta_domain[0],0,meta_domain[meta_domain.length-1]]*/
+            print(meta_domain)
+      //metaColorScaleNight = d3.scaleDiverging(meta_domain,d3.interpolateRdBu)
+      metaColorScaleNight = d3.scaleOrdinal(meta_domain,["#e69f00","#0072b2","#56b4e9","#ffffff","#009e73"])
+      metaColorScaleLight = d3.scaleOrdinal(meta_domain,["#e69f00","#0072b2","#56b4e9","#ffffff","#009e73"])
       metaColorScale = metaColorScaleNight
       meta_domain.forEach((meta) => {
         if (meta != "") {
@@ -538,7 +545,7 @@
         if (month.length == 1) {
           month = '0' + month
         } 
-        canvas.text(month + '/' + (dt.getFullYear().toString()).slice(-2),xFlowScale(period),height/2 + 5);
+        canvas.text(month + '/' + (dt.getFullYear().toString()),xFlowScale(period),height/2 + 5);
         canvas.pop() 
         cpt ++;   
       })

@@ -52,7 +52,7 @@ parser.add_argument('--grouping_strategy'
 	               , default='none', help='choose a strategy to group individual nodes')
 parser.add_argument('--group_size'
 	               , type=int
-	               , default=-1, help='filter small node groups; no filter is -1')
+	               , default=30, help='filter small node groups; no filter is -1')
 parser.add_argument('--group_metadata_strategy'
 	               , choices=['majority','most_frequent','mean']
 	               , default=['majority'], help='choose a strategy to aggregate individual metadata at the node groups level')
@@ -71,11 +71,13 @@ args = parser.parse_args()
 def getGraphPhase(snapshot) :
 	if args.network_type[0] == "real" :
 		# real snapshots	
-		date_str = (snapshot.gp["timestamp"][0]).split('-')
-		date  = datetime(int(date_str[0]), int(date_str[1]), int(date_str[2]), 0, 0)
+		date_str = (snapshot.gp["snapshot_date"])
+		# return date_str
+		date  = datetime(int(date_str), 5, 1, 0, 0)
+		print(date)
 		epoch = date.timestamp()
 		return str(int(epoch))
-		# with suppress(KeyError): return 
+		# # with suppress(KeyError): return 
 		# return str(snapshots.index(snapshot))
 	else :
 		# synthetic snapshots
@@ -85,7 +87,7 @@ def getGraphPhase(snapshot) :
 def getGraphName(snapshot) :
 	if args.network_type[0] == "real" :	
 		# real snapshots
-		with suppress(KeyError): return snapshot.gp["hashtag"]
+		with suppress(KeyError): return snapshot.gp["graph_name"]
 	else :
 		# synthetic snapshots
 		name = (args.snapshots[0].split("/")[-1]).split(".")[0]
@@ -100,7 +102,7 @@ graph_name = ""
 if args.snapshots != "board_directors" :
 	# load your own snapshots
 	print("\nloading your own snapshots ...")
-	if args.network_type == "real" :
+	if args.network_type[0] == "real" :
 		# real snapshots
 		paths = glob.glob(args.snapshots[0] + "*.gt")
 		snapshots = list(map(lambda p: loadSnapshot(p), paths))
@@ -241,7 +243,7 @@ def connectedComponents (components,cur,graph) :
 
 def getVertexId (snapshot,v) :
 	if args.network_type[0] == "real" :
-		return str(v)
+		return str(snapshot.vp.ids[v])
 	else :
 		return str(v)
 
@@ -265,7 +267,7 @@ def getVertexMetaType (snapshot,v) :
 
 def getVertexMeta (snapshot,v) :
 	try:
-		return snapshot.vp.ip_values[v]
+		return snapshot.vp.user_country[v]
 	except Exception as e:
 		return 'NA'
 
@@ -289,8 +291,10 @@ def snapshotToLouvainPartitions (snapshot) :
 		v_id = getVertexId(snapshot,v)
 		gx.add_node(v_id)
 	for e in snapshot.edges():
-		s = snapshot.vp.vid[e.source()]
-		t = snapshot.vp.vid[e.target()]
+		# s = snapshot.vp.vid[e.source()]
+		# t = snapshot.vp.vid[e.target()]
+		s = getVertexId(snapshot,e.source())
+		t = getVertexId(snapshot,e.target())
 		gx.add_edge(s, t, weight=snapshot.ep.weight[e])
 	partitions = community_louvain.best_partition(gx,weight='weight')	
 	vlouvain = snapshot.new_vertex_property("int")
@@ -414,7 +418,7 @@ for snapshot in snapshots :
 					if (metas.count(meta) > freq_max) :
 						# we use a simple most frequent strategy
 						freq_max = metas.count(meta)
-						most_freq_metal = meta
+						most_freq_meta = meta
 				if (args.group_metadata_strategy == "most_frequent") :
 					blocks_to_meta[b_id] = most_freq_meta
 				if (args.group_metadata_strategy == "majority") : 
@@ -659,7 +663,7 @@ else :
 def areInScope(bi_t,bj_t) :
 	bi_t_idx = phases.index(bi_t)
 	bj_t_idx = phases.index(bj_t)
-	return (abs(bi_t_idx - bj_t_idx) <= 2)
+	return (abs(bi_t_idx - bj_t_idx) <= 1)
 
 print('\nembed and project the matrix with pacmap ...')	
 
@@ -682,7 +686,6 @@ for i in range(len(mat)) :
 			vector.append(mat[i][j])
 		else :
 			vector.append(0)
-		
 		output_matrix.write(bi + ',' + bj + ',' + str(mat[i][j]) + '\n')
 	vectors.append(vector)
 
@@ -710,14 +713,15 @@ for i in range(len(mat)) :
 		else :
 			vector_pruned.append(0)
 			output_matrix_pruned.write(bi + ',' + bj + ',' + str(0) + '\n')
-	# vectors[i] = vector_pruned
+	#vectors[i] = vector_pruned
 
 vectors = np.array(vectors)	
 
 # 3) use PaCMAP to project the embedding on 2D visualization space
 
-# projector = pacmap.PaCMAP(n_components=2, n_neighbors=7, MN_ratio=3, FP_ratio=0.1) 
-projector = pacmap.PaCMAP(n_components=2, n_neighbors=10, MN_ratio=0.5, FP_ratio=2) 
+#projector = pacmap.PaCMAP(n_components=2, n_neighbors=7, MN_ratio=3, FP_ratio=0.1) 
+# projector = pacmap.PaCMAP(n_components=2, n_neighbors=10, MN_ratio=0.5, FP_ratio=2)
+projector = pacmap.PaCMAP(n_components=2, n_neighbors=6, MN_ratio=0.5, FP_ratio=2) 
 projection_2D = projector.fit_transform(vectors, init="pca")
 
 xs = projection_2D[:, 0]
