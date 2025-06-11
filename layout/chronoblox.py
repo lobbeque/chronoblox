@@ -7,7 +7,6 @@
 
 # conda activate gt
 
-
 ####
 ## import
 ####
@@ -28,11 +27,7 @@ import random
 import sys
 from datetime import datetime
 
-from gensim.models import Word2Vec
-from sklearn.decomposition import PCA
 from community import community_louvain
-
-from node2vec import Node2Vec
 
 ####
 ## args
@@ -718,10 +713,8 @@ for i in range(len(mat)) :
 vectors = np.array(vectors)	
 
 # 3) use PaCMAP to project the embedding on 2D visualization space
-
-#projector = pacmap.PaCMAP(n_components=2, n_neighbors=7, MN_ratio=3, FP_ratio=0.1) 
-# projector = pacmap.PaCMAP(n_components=2, n_neighbors=10, MN_ratio=0.5, FP_ratio=2)
-projector = pacmap.PaCMAP(n_components=2, n_neighbors=6, MN_ratio=0.5, FP_ratio=2) 
+ 
+projector = pacmap.PaCMAP(n_components=2, n_neighbors=10, MN_ratio=0.5, FP_ratio=2)
 projection_2D = projector.fit_transform(vectors, init="pca")
 
 xs = projection_2D[:, 0]
