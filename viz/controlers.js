@@ -102,14 +102,15 @@ function displayMouseOver(c) {
   // 1 : display the diachronic edges
   let taleId = node_over.getTale();
   let period = node_over.getPeriod()
-  talesEdges[taleId].forEach((diac_edge) => {
-    diac_edge.displayEdge(c,"over")
-  })
-
+  if (talesEdges[taleId] != undefined) {
+    talesEdges[taleId].forEach((diac_edge) => {
+      diac_edge.displayEdge(c,"over")
+    }) 
+  }
   // 2 : find the synchronic nodes and display the synchronic edges
   sync_nodes_sources = []
   sync_nodes_targets = []
-  if ((taleClicked != taleId) && (taleClicked != -1) && (taleId != -1)) {
+  if ((taleClicked != taleId) && (taleClicked != -1) && (taleId != -1) && (taleId != undefined)) {
     nodes_sources = talesNodes[taleId]
     nodes_targets = talesNodes[taleClicked]
     chronoSyncEdges.forEach((edge) => {

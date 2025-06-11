@@ -187,7 +187,7 @@
         <div class="canvas" id="p5canvas"></div>    
       </div>
       <div class="footer">
-        <p>CSS Team // ERC Socsemics // 2024</p>
+        <p>CSS Team // Cams (CNRS/EHESS) // 2025</p>
       </div> 
     </main>
   </body>
@@ -320,8 +320,27 @@
       /*nodes = loadTable('../layout/ieee-viz_co-author_sentence_median_flatten_rbfkernel_none_blocks.csv','csv','header')
       edges = loadTable('../layout/ieee-viz_co-author_sentence_median_flatten_rbfkernel_none_edges.csv','csv','header')*/ 
 
-      nodes = loadTable('../layout/ieee-viz_co-author_sentence_median_flatten_euclid_none_blocks.csv','csv','header')
-      edges = loadTable('../layout/ieee-viz_co-author_sentence_median_flatten_euclid_none_edges.csv','csv','header')      
+      /*nodes = loadTable('../layout/uk_by_label_blocks.csv','csv','header')
+      edges = loadTable('../layout/uk_by_label_edges.csv','csv','header')*/ 
+
+      /*nodes = loadTable('../layout/chronoblox_scenario_graphs_1_sbm_blocks.csv','csv','header')
+      edges = loadTable('../layout/chronoblox_scenario_graphs_1_sbm_edges.csv','csv','header') */
+
+      /*nodes = loadTable('../layout/chronoblox_scenario_graphs_2_sbm_blocks.csv','csv','header')
+      edges = loadTable('../layout/chronoblox_scenario_graphs_2_sbm_edges.csv','csv','header') */
+
+      /*nodes = loadTable('../layout/chronoblox_scenario_graphs_3_sbm_blocks.csv','csv','header')
+      edges = loadTable('../layout/chronoblox_scenario_graphs_3_sbm_edges.csv','csv','header') */
+
+      /*nodes = loadTable('../layout/chronoblox_scenario_graphs_4_sbm_blocks.csv','csv','header')
+      edges = loadTable('../layout/chronoblox_scenario_graphs_4_sbm_edges.csv','csv','header') */
+
+      /*nodes = loadTable('../layout/chronoblox_scenario_graphs_5_sbm_blocks.csv','csv','header')
+      edges = loadTable('../layout/chronoblox_scenario_graphs_5_sbm_edges.csv','csv','header')*/ 
+
+      nodes = loadTable('../layout/impact_investing_louvain_blocks.csv','csv','header')
+      edges = loadTable('../layout/impact_investing_louvain_edges.csv','csv','header')   
+      
       
       neuekabel = loadFont('fonts/NeueKabel.otf');
       neuekabelbold = loadFont('fonts/NeueKabel-Bold.otf');
@@ -356,6 +375,8 @@
       periods = nodes.getColumn('phase')
       periods = Array.from(new Set(periods))
       periods.sort()
+
+      print(periods)
 
       setupReadingDirection()
 
@@ -463,14 +484,17 @@
       })
 
       // meta data
-      
+
       let metalegend = document.getElementById("metalegend")
       let meta_domain = nodes.getColumn('meta')
       meta_domain = Array.from(new Set(meta_domain))
       meta_domain.sort(function (a,b) {return a-b;})
-      //metaColorScale = d3.scaleOrdinal(meta_domain, ["#0072b2","#e69f00","#56b4e9","#009e73","#f0e442"])
-      metaColorScaleNight = d3.scaleOrdinal(meta_domain,nightPalette)
-      metaColorScaleLight = d3.scaleOrdinal(meta_domain,lightPalette)
+/*      meta_domain = meta_domain.map((a) => parseFloat(a))
+      meta_domain = [meta_domain[0],0,meta_domain[meta_domain.length-1]]*/
+            print(meta_domain)
+      //metaColorScaleNight = d3.scaleDiverging(meta_domain,d3.interpolateRdBu)
+      metaColorScaleNight = d3.scaleOrdinal(meta_domain,["#e69f00","#0072b2","#56b4e9","#ffffff","#009e73"])
+      metaColorScaleLight = d3.scaleOrdinal(meta_domain,["#e69f00","#0072b2","#56b4e9","#ffffff","#009e73"])
       metaColorScale = metaColorScaleNight
       meta_domain.forEach((meta) => {
         if (meta != "") {
@@ -508,14 +532,21 @@
         canvas.push()
         canvas.fill("#FFFFFF")
         canvas.textAlign(CENTER)
-        canvas.textSize(16);
+        canvas.textSize(11);
         canvas.textFont(neuekabel);
         if (periods[focus] == period) {
           canvas.fill("#fdea24")
           canvas.textFont(neuekabelbold);
         }
-        canvas.text(period,xFlowScale(period),height/2 + 5);
-        canvas.pop()
+
+        var dt = new Date(0)
+        dt.setUTCSeconds(period)
+        var month = (dt.getMonth() + 1).toString()
+        if (month.length == 1) {
+          month = '0' + month
+        } 
+        canvas.text(month + '/' + (dt.getFullYear().toString()),xFlowScale(period),height/2 + 5);
+        canvas.pop() 
         cpt ++;   
       })
     }   
