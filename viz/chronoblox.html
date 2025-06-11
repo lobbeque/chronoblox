@@ -138,7 +138,7 @@
       <div class="container">
         <div class="dashboard">
           <!-- title -->
-          <img src = "./logo.svg" class="logo" alt="Chronoblox"/>
+          <img src = "logo.svg" class="logo" alt="Chronoblox"/>
           
           <!-- night / day mode -->
           <p class="dashboard-legend">mode</p>
@@ -187,7 +187,7 @@
         <div class="canvas" id="p5canvas"></div>    
       </div>
       <div class="footer">
-        <p>CSS Team // Cams (CNRS/EHESS) // 2025</p>
+        <p>Cams (CNRS/EHESS) // <script>document.write(/\d{4}/.exec(Date())[0])</script></p>
       </div> 
     </main>
   </body>
@@ -317,30 +317,8 @@
 
     function preload() {
       
-      /*nodes = loadTable('../layout/ieee-viz_co-author_sentence_median_flatten_rbfkernel_none_blocks.csv','csv','header')
-      edges = loadTable('../layout/ieee-viz_co-author_sentence_median_flatten_rbfkernel_none_edges.csv','csv','header')*/ 
-
-      /*nodes = loadTable('../layout/uk_by_label_blocks.csv','csv','header')
-      edges = loadTable('../layout/uk_by_label_edges.csv','csv','header')*/ 
-
-      /*nodes = loadTable('../layout/chronoblox_scenario_graphs_1_sbm_blocks.csv','csv','header')
-      edges = loadTable('../layout/chronoblox_scenario_graphs_1_sbm_edges.csv','csv','header') */
-
-      /*nodes = loadTable('../layout/chronoblox_scenario_graphs_2_sbm_blocks.csv','csv','header')
-      edges = loadTable('../layout/chronoblox_scenario_graphs_2_sbm_edges.csv','csv','header') */
-
-      /*nodes = loadTable('../layout/chronoblox_scenario_graphs_3_sbm_blocks.csv','csv','header')
-      edges = loadTable('../layout/chronoblox_scenario_graphs_3_sbm_edges.csv','csv','header') */
-
-      /*nodes = loadTable('../layout/chronoblox_scenario_graphs_4_sbm_blocks.csv','csv','header')
-      edges = loadTable('../layout/chronoblox_scenario_graphs_4_sbm_edges.csv','csv','header') */
-
-      /*nodes = loadTable('../layout/chronoblox_scenario_graphs_5_sbm_blocks.csv','csv','header')
-      edges = loadTable('../layout/chronoblox_scenario_graphs_5_sbm_edges.csv','csv','header')*/ 
-
-      nodes = loadTable('../layout/impact_investing_louvain_blocks.csv','csv','header')
-      edges = loadTable('../layout/impact_investing_louvain_edges.csv','csv','header')   
-      
+      nodes = loadTable('../layout/board_directors_sbm_blocks.csv','csv','header')
+      edges = loadTable('../layout/board_directors_sbm_edges.csv','csv','header')
       
       neuekabel = loadFont('fonts/NeueKabel.otf');
       neuekabelbold = loadFont('fonts/NeueKabel-Bold.otf');
@@ -375,8 +353,6 @@
       periods = nodes.getColumn('phase')
       periods = Array.from(new Set(periods))
       periods.sort()
-
-      print(periods)
 
       setupReadingDirection()
 
@@ -424,7 +400,7 @@
           let s = nodes.findRow(edge.get('source'),'id')
           let t = nodes.findRow(edge.get('target'),'id') 
           if (s != undefined && t != undefined && s != t) {
-            let tale = parseInt(edge.get('sync_component'))
+            let tale = parseInt(edge.get('diac_component'))
             let diac_edge = new taleEdge(toXScreen(parseFloat(s.get('x')))
                                         ,toXScreen(parseFloat(t.get('x')))
                                         ,toYScreen(parseFloat(s.get('y')))
@@ -489,12 +465,8 @@
       let meta_domain = nodes.getColumn('meta')
       meta_domain = Array.from(new Set(meta_domain))
       meta_domain.sort(function (a,b) {return a-b;})
-/*      meta_domain = meta_domain.map((a) => parseFloat(a))
-      meta_domain = [meta_domain[0],0,meta_domain[meta_domain.length-1]]*/
-            print(meta_domain)
-      //metaColorScaleNight = d3.scaleDiverging(meta_domain,d3.interpolateRdBu)
-      metaColorScaleNight = d3.scaleOrdinal(meta_domain,["#e69f00","#0072b2","#56b4e9","#ffffff","#009e73"])
-      metaColorScaleLight = d3.scaleOrdinal(meta_domain,["#e69f00","#0072b2","#56b4e9","#ffffff","#009e73"])
+      metaColorScaleNight = d3.scaleOrdinal(meta_domain,nightPalette)
+      metaColorScaleLight = d3.scaleOrdinal(meta_domain,lightPalette)
       metaColorScale = metaColorScaleNight
       meta_domain.forEach((meta) => {
         if (meta != "") {
@@ -527,27 +499,18 @@
     function drawTimeLine(canvas,height) {
       // draw the background
       canvas.background("#444444");
-      cpt = 0
       periods.forEach((period) => {
         canvas.push()
         canvas.fill("#FFFFFF")
         canvas.textAlign(CENTER)
-        canvas.textSize(11);
+        canvas.textSize(14);
         canvas.textFont(neuekabel);
         if (periods[focus] == period) {
           canvas.fill("#fdea24")
           canvas.textFont(neuekabelbold);
         }
-
-        var dt = new Date(0)
-        dt.setUTCSeconds(period)
-        var month = (dt.getMonth() + 1).toString()
-        if (month.length == 1) {
-          month = '0' + month
-        } 
-        canvas.text(month + '/' + (dt.getFullYear().toString()),xFlowScale(period),height/2 + 5);
-        canvas.pop() 
-        cpt ++;   
+        canvas.text(period,xFlowScale(period),height/2 + 5);
+        canvas.pop()  
       })
     }   
 

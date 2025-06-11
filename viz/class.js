@@ -76,9 +76,9 @@ class chronoSyncEdge {
   }
 
   displayEdge(c,focused,event) {  
-    let zoom = ((focused == "sync_edge_period_focus") ? 0 : 0)
+    let zoom = ((focused == "sync_edge_period_focus") ? 1 : 0)
     if (focused == "sync_edge_focus") {
-      //zoom += 1
+      zoom += 1
     }    
     c.push();
     if (event == "click") {
@@ -88,7 +88,7 @@ class chronoSyncEdge {
     } else {
       c.stroke(focusToColor(focused));
     }     
-    c.strokeWeight(this.w );           
+    c.strokeWeight(this.w + zoom);           
     c.line(this.x1,this.y1,this.x2,this.y2);
     c.pop();
   } 
@@ -96,9 +96,9 @@ class chronoSyncEdge {
   displayStroke(c,focused,event) { 
     c.push();
     c.stroke("#333333");
-    let zoom = 0
+    let zoom = 1.5
     if (focused == "sync_edge_focus") {
-      //zoom += 2
+      zoom += 2
     }    
     c.strokeWeight(this.w + zoom);           
     c.line(this.x1,this.y1,this.x2,this.y2);
@@ -141,13 +141,11 @@ function focusToColor(focused) {
     case 'node_neighbor_focus':
     case 'node_over_focus':
     case 'node_click_focus':
-      focused_color = color('#938A79');
-      //focused_color = color("#FDEA24");
+    case 'sync_edge_period_focus':
+      focused_color = color("#FDEA24");
       break;                
     case 'sync_edge_focus':
-    case 'sync_edge_period_focus':  
-      focused_color = color("#938A79");
-      focused_color.setAlpha(100)
+      focused_color = color("#5cc9f5");
       break;                   
   } 
   return focused_color;   
@@ -219,7 +217,7 @@ class chronoNode {
     c.stroke("#333333");
     c.strokeWeight(1);
     if (focused == "node_period_focus") {
-      /*c.strokeWeight(3);*/
+      c.strokeWeight(3);
     }
 
     if (focused == "node_neighbor_step" || focused == "node_neighbor_focus") {
@@ -231,7 +229,7 @@ class chronoNode {
     }
 
     if (focused == "node_click_focus" || focused == "node_click_step" || focused == "node_over_focus" || focused == "node_over_step") {
-      /*c.strokeWeight(3);
+      c.strokeWeight(3);
       if (event == "click") {
         c.stroke(taleColor[(taleClickCount - 1) % 2]);
       } else {
@@ -239,7 +237,7 @@ class chronoNode {
       }
       c.fill("#333333");
       c.circle(this.x ,this.y, this.w + zoom + 5);
-      c.noStroke();*/
+      c.noStroke();
     }  
 
 
@@ -257,7 +255,7 @@ class chronoNode {
     }  
 
     if (periods.indexOf(this.period) == focus) {
-      //fill_color = color("#FDEA24")
+      fill_color = color("#FDEA24")
     }  
 
     c.fill(fill_color);    

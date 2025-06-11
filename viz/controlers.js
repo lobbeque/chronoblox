@@ -4,21 +4,21 @@
 
 
 function setShader(mode) {
-	shader = mode
-	const btn_night = document.getElementById("nightshader");
-	const btn_day = document.getElementById("dayshader");
-	switch (mode) {
-	  case 'night':
-	  	btn_night.classList.add('button-clicked');
-	  	btn_day.classList.remove('button-clicked');
+  shader = mode
+  const btn_night = document.getElementById("nightshader");
+  const btn_day = document.getElementById("dayshader");
+  switch (mode) {
+    case 'night':
+      btn_night.classList.add('button-clicked');
+      btn_day.classList.remove('button-clicked');
       metaColorScale = metaColorScaleNight;
-	    break;
-	  case 'day':
-	  	btn_night.classList.remove('button-clicked');
-	  	btn_day.classList.add('button-clicked');
+      break;
+    case 'day':
+      btn_night.classList.remove('button-clicked');
+      btn_day.classList.add('button-clicked');
       metaColorScale = metaColorScaleLight;
-	    break;
-	}	
+      break;
+  } 
 }
 
 function removeCanopy() {
@@ -102,15 +102,14 @@ function displayMouseOver(c) {
   // 1 : display the diachronic edges
   let taleId = node_over.getTale();
   let period = node_over.getPeriod()
-  if (talesEdges[taleId] != undefined) {
-    talesEdges[taleId].forEach((diac_edge) => {
-      diac_edge.displayEdge(c,"over")
-    }) 
-  }
+  talesEdges[taleId].forEach((diac_edge) => {
+    diac_edge.displayEdge(c,"over")
+  })
+
   // 2 : find the synchronic nodes and display the synchronic edges
   sync_nodes_sources = []
   sync_nodes_targets = []
-  if ((taleClicked != taleId) && (taleClicked != -1) && (taleId != -1) && (taleId != undefined)) {
+  if ((taleClicked != taleId) && (taleClicked != -1) && (taleId != -1)) {
     nodes_sources = talesNodes[taleId]
     nodes_targets = talesNodes[taleClicked]
     chronoSyncEdges.forEach((edge) => {
