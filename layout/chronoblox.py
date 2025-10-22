@@ -36,7 +36,7 @@ parser.add_argument('--snapshots'
 				   , nargs=1
 				   , default='board_directors', help='path to the snapshots (default: load the board_directors data set)')
 parser.add_argument('--grouping_strategy'
-	               , choices=['sbm','louvain']
+	               , choices=['sbm','louvain','by_label']
 	               , default='sbm', help='choose a strategy to group individual nodes')
 parser.add_argument('--group_size'
 	               , type=int
@@ -248,12 +248,21 @@ def snapshotToLouvainPartitions (snapshot) :
 	state.set_state(node_grouping_labels)
 	return state	
 
+def snapshotToLabelPartitions (snapshot) :
+	# use existing node labels to create node groups
+	node_grouping_labels = snapshot.vp.vgroup
+	state = gt.BlockState(snapshot)
+	state.set_state(node_grouping_labels)
+	return state	
+
 def snapshotToPartition (snapshot,strategy) :
 	# select the grouping strategy
 	if   strategy == "sbm" :
 		return snapshotToSBMPartitions(snapshot)
 	elif strategy == "louvain":
-		return snapshotToLouvainPartitions(snapshot)		
+		return snapshotToLouvainPartitions(snapshot)	
+	elif strategy == "by_label":
+		return snapshotToLabelPartitions(snapshot)			
 
 
 ####
@@ -500,7 +509,7 @@ for i in range(len(mat)) :
 	vector_pruned = []
 	for j in range(len(mat)) :
 		bj = b_ids[j]
-		if vectors[i][j] > thr :
+		if vectors[i][j] > 0 :
 			vector_pruned.append(vectors[i][j])
 			output_matrix_pruned.write(bi + ',' + bj + ',' + str(vectors[i][j]) + '\n')
 		else :
@@ -511,8 +520,9 @@ for i in range(len(mat)) :
 vectors = np.array(vectors)	
 
 # 3) use PaCMAP to project the embedding on 2D visualization space
- 
-projector = pacmap.PaCMAP(n_components=2, n_neighbors=10, MN_ratio=0.5, FP_ratio=2)
+
+# projector = pacmap.PaCMAP(n_components=2, n_neighbors=10, MN_ratio=0.5, FP_ratio=2) 
+projector = pacmap.PaCMAP(n_components=2, n_neighbors=1, MN_ratio=0.5, FP_ratio=2)
 projection_2D = projector.fit_transform(vectors, init="pca")
 
 xs = projection_2D[:, 0]
