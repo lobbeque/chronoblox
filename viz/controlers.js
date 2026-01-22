@@ -4,21 +4,21 @@
 
 
 function setShader(mode) {
-	shader = mode
-	const btn_night = document.getElementById("nightshader");
-	const btn_day = document.getElementById("dayshader");
-	switch (mode) {
-	  case 'night':
-	  	btn_night.classList.add('button-clicked');
-	  	btn_day.classList.remove('button-clicked');
+  shader = mode
+  const btn_night = document.getElementById("nightshader");
+  const btn_day = document.getElementById("dayshader");
+  switch (mode) {
+    case 'night':
+      btn_night.classList.add('button-clicked');
+      btn_day.classList.remove('button-clicked');
       metaColorScale = metaColorScaleNight;
-	    break;
-	  case 'day':
-	  	btn_night.classList.remove('button-clicked');
-	  	btn_day.classList.add('button-clicked');
+      break;
+    case 'day':
+      btn_night.classList.remove('button-clicked');
+      btn_day.classList.add('button-clicked');
       metaColorScale = metaColorScaleLight;
-	    break;
-	}	
+      break;
+  } 
 }
 
 function removeCanopy() {

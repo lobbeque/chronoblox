@@ -138,7 +138,7 @@
       <div class="container">
         <div class="dashboard">
           <!-- title -->
-          <img src = "./logo.svg" class="logo" alt="Chronoblox"/>
+          <img src = "logo.svg" class="logo" alt="Chronoblox"/>
           
           <!-- night / day mode -->
           <p class="dashboard-legend">mode</p>
@@ -187,7 +187,7 @@
         <div class="canvas" id="p5canvas"></div>    
       </div>
       <div class="footer">
-        <p>CSS Team // Marc Bloch Center // 2024</p>
+        <p>Cams (CNRS/EHESS) // <script>document.write(/\d{4}/.exec(Date())[0])</script></p>
       </div> 
     </main>
   </body>
@@ -228,8 +228,8 @@
     let syncEdgesScale;
     let metaColorScale,metaColorScaleNight,metaColorScaleLight;
     let mixedMeta = "#fff1f1";
-    let nightPalette = ["#8a3ffc","#33b1ff","#007d79","#ff7eb6","#fa4d56","#6fdc8c","#d12771","#d2a106","#08bdba","#bae6ff","#ba4e00","#d4bbff"];
-    let lightPalette = ["#6929c4","#1192e8","#005d5d","#9f1853","#fa4d56","#198038","#ee538b","#b28600","#009d9a","#012749","#8a3800","#a56eff"];
+    let nightPalette = ["#d81b60","#ffc107","#004d40","#1e88e5","#fa4d56","#6fdc8c","#d12771","#d2a106","#08bdba","#bae6ff","#ba4e00","#d4bbff"];
+    let lightPalette = ["#d81b60","#ffc107","#004d40","#1e88e5","#fa4d56","#198038","#ee538b","#b28600","#009d9a","#012749","#8a3800","#a56eff"];
 
     // Tales
     const talesColorScale = d3.scaleOrdinal(d3.schemeSet3);
@@ -317,11 +317,8 @@
 
     function preload() {
       
-      /*nodes = loadTable('../layout/ieee-viz_co-author_sentence_median_flatten_rbfkernel_none_blocks.csv','csv','header')
-      edges = loadTable('../layout/ieee-viz_co-author_sentence_median_flatten_rbfkernel_none_edges.csv','csv','header')*/ 
-
-      nodes = loadTable('../layout/ieee-viz_co-author_sentence_median_flatten_euclid_none_blocks.csv','csv','header')
-      edges = loadTable('../layout/ieee-viz_co-author_sentence_median_flatten_euclid_none_edges.csv','csv','header')      
+      nodes = loadTable('../layout/forward_unfiltered_lang_2019-11_sbm_blocks.csv','csv','header')
+      edges = loadTable('../layout/forward_unfiltered_lang_2019-11_sbm_edges.csv','csv','header')
       
       neuekabel = loadFont('fonts/NeueKabel.otf');
       neuekabelbold = loadFont('fonts/NeueKabel-Bold.otf');
@@ -403,7 +400,7 @@
           let s = nodes.findRow(edge.get('source'),'id')
           let t = nodes.findRow(edge.get('target'),'id') 
           if (s != undefined && t != undefined && s != t) {
-            let tale = parseInt(edge.get('sync_component'))
+            let tale = parseInt(edge.get('diac_component'))
             let diac_edge = new taleEdge(toXScreen(parseFloat(s.get('x')))
                                         ,toXScreen(parseFloat(t.get('x')))
                                         ,toYScreen(parseFloat(s.get('y')))
@@ -463,12 +460,11 @@
       })
 
       // meta data
-      
+
       let metalegend = document.getElementById("metalegend")
       let meta_domain = nodes.getColumn('meta')
       meta_domain = Array.from(new Set(meta_domain))
       meta_domain.sort(function (a,b) {return a-b;})
-      //metaColorScale = d3.scaleOrdinal(meta_domain, ["#0072b2","#e69f00","#56b4e9","#009e73","#f0e442"])
       metaColorScaleNight = d3.scaleOrdinal(meta_domain,nightPalette)
       metaColorScaleLight = d3.scaleOrdinal(meta_domain,lightPalette)
       metaColorScale = metaColorScaleNight
@@ -503,20 +499,18 @@
     function drawTimeLine(canvas,height) {
       // draw the background
       canvas.background("#444444");
-      cpt = 0
       periods.forEach((period) => {
         canvas.push()
         canvas.fill("#FFFFFF")
         canvas.textAlign(CENTER)
-        canvas.textSize(16);
+        canvas.textSize(14);
         canvas.textFont(neuekabel);
         if (periods[focus] == period) {
           canvas.fill("#fdea24")
           canvas.textFont(neuekabelbold);
         }
         canvas.text(period,xFlowScale(period),height/2 + 5);
-        canvas.pop()
-        cpt ++;   
+        canvas.pop()  
       })
     }   
 
