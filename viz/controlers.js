@@ -102,9 +102,11 @@ function displayMouseOver(c) {
   // 1 : display the diachronic edges
   let taleId = node_over.getTale();
   let period = node_over.getPeriod()
-  talesEdges[taleId].forEach((diac_edge) => {
-    diac_edge.displayEdge(c,"over")
-  })
+  if (taleId != "-1") {
+    talesEdges[taleId].forEach((diac_edge) => {
+      diac_edge.displayEdge(c,"over")
+    })
+  }
 
   // 2 : find the synchronic nodes and display the synchronic edges
   sync_nodes_sources = []
@@ -136,17 +138,19 @@ function displayMouseOver(c) {
   }  
 
   // 3 : display the diachronic nodes
-  talesNodes[taleId].forEach((id) => {
-    diac_node = chronoNodes[id]
-    diac_period = diac_node.getPeriod()
-    if (id != node_over.getId()){
-      if (periods.indexOf(diac_period) != focus) {
-        diac_node.display(c,"node_tale_step","over")
-      } else {
-        diac_node.display(c,"node_tale_focus","over")
+  if (taleId != "-1") {
+    talesNodes[taleId].forEach((id) => {
+      diac_node = chronoNodes[id]
+      diac_period = diac_node.getPeriod()
+      if (id != node_over.getId()){
+        if (periods.indexOf(diac_period) != focus) {
+          diac_node.display(c,"node_tale_step","over")
+        } else {
+          diac_node.display(c,"node_tale_focus","over")
+        }
       }
-    }
-  })        
+    })
+  }        
 
   // 5 : display the node under focus 
   sync_nodes_targets.forEach((node_id) => {

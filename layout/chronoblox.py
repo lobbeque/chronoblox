@@ -40,13 +40,20 @@ parser.add_argument('--grouping_strategy'
 	               , default='sbm', help='choose a strategy to group individual nodes')
 parser.add_argument('--group_size'
 	               , type=int
-	               , default=30, help='filter small node groups; no filter is -1')
+	               , default=1, help='filter small node groups; no filter is -1')
 parser.add_argument('--group_metadata_strategy'
 	               , choices=['majority','most_frequent','mean']
 	               , default='majority', help='choose a strategy to aggregate individual metadata at the node groups level')
 parser.add_argument('--group_label_strategy'
 	               , choices=['most_frequent','most_central']
 	               , default='most_central', help='choose a strategy to label node groups')
+parser.add_argument('--inter_temporal_filter'
+	               , type=float
+	               , default=0, help='maybe filter intertemporal edges based on a similarity threshold')
+parser.add_argument('--inter_temporal_scope'
+	               , type=int
+	               , default=-1, help='maybe constrain the intertemporal scope of the similarity matching process')
+
 
 args = parser.parse_args()
 
@@ -70,6 +77,8 @@ def loadSnapshot(path) :
 ## vertex getters
 ####
 
+def getNbVertices(vs):
+    return sum(1 for v in vs)
 
 def getVertexId (snapshot,v) :
 	with suppress(KeyError): return str(snapshot.vp.vid[v])
@@ -225,7 +234,8 @@ def connectedComponents (components,cur,graph) :
 
 def snapshotToSBMPartitions (snapshot) :
 	# use the sbm method to create node groups
-	return gt.minimize_blockmodel_dl(snapshot, state_args=dict(deg_corr=True,recs=[snapshot.ep.weight],rec_types=["discrete-geometric"]))
+	state = gt.minimize_blockmodel_dl(snapshot, state_args=dict(deg_corr=True))
+	return state
 
 def snapshotToLouvainPartitions (snapshot) :
 	# use the louvain method to create node groups
@@ -276,6 +286,9 @@ sequence_of_blocks = {}
 
 for snapshot in snapshots :
 
+	if snapshot.num_vertices() == 0 :
+		continue
+
 	phase = getGraphPhase(snapshot)
 	phases.append(phase)
 
@@ -285,9 +298,9 @@ for snapshot in snapshots :
 
 	# [block] 1) inferring a partition from a snapshot
 
-	partition = snapshotToPartition(snapshot,args.grouping_strategy)
-
 	blocks = {}
+	
+	partition = snapshotToPartition(snapshot,args.grouping_strategy)
 
 	for v in snapshot.vertices() :
 
@@ -304,6 +317,7 @@ for snapshot in snapshots :
 		else :
 			blocks[b_id] = [v_id]
 			blocks_to_meta[b_id]  = [v_meta]
+
 
 	# [block] 3) maybe filter the small blocks
 
@@ -363,7 +377,8 @@ for snapshot in snapshots :
 	# [sync_edges] 3) filter the intra-temporal edges by using a sHHI	
 	# https://en.wikipedia.org/wiki/Herfindahl%E2%80%93Hirschman_index
 
-	grouped_sync_edges = groupEdges(sync_edges)		
+	grouped_sync_edges = groupEdges(sync_edges)	
+
 	for edges in grouped_sync_edges :
 		filtered_edges = hhiFilterEdges(edges)
 		for edge in filtered_edges :
@@ -379,12 +394,12 @@ for snapshot in snapshots :
 		sync_edges_list.append([edge[0],edge[1]])
 		# then we export the intra-temporal edges
 		toEdgeFile(output_edges,str(edge[0]),str(edge[1]),str(sync_edges[edge]["w"]),phase,'sync','-1')	
-
 		
 ####
 ## create the inter-temporal similarity matrix
 ####
 
+print(phases)
 
 print('\nbuild the inter-temporal similarity matrix')
 
@@ -415,13 +430,11 @@ for bi in sequence_of_blocks.keys() :
 		# [matrix] 2) populate the similarity matrix 
 		
 		sim = jaccard(bi_v,bj_v)
-
 		row.append(sim)
-		
-		if (sim > 0) and (isDirectAncestor(bi_t,bj_t)) :
 
-			# [diac_edges] 1) put the (t-1,t) inter-temporal edges aside to compute the inter-temporal lineages 
-			
+		if (sim > args.inter_temporal_filter) and (isDirectAncestor(bi_t,bj_t)) :
+
+			# [diac_edges] 1) put the (t-1,t) inter-temporal edges aside to compute the inter-temporal lineages 		
 			filtered_diac_edges[(bi,bj)] = {'w':sim,'shhi':0}
 
 	mat.append(row)
@@ -462,10 +475,15 @@ for edge in filtered_diac_edges.keys() :
 ## [chronophotographic projection]
 ####
 
-def areInScope(bi_t,bj_t) :
+if (args.inter_temporal_scope != -1) :
+	max_scope = args.inter_temporal_scope
+else :
+	max_scope = len(phases)
+
+def areInScope(bi_t,bj_t,bi,bj) :
 	bi_t_idx = phases.index(bi_t)
 	bj_t_idx = phases.index(bj_t)
-	return (abs(bi_t_idx - bj_t_idx) <= 1)
+	return (abs(bi_t_idx - bj_t_idx) <= max_scope)
 
 print('\nembed and project the matrix with pacmap ...')	
 
@@ -484,7 +502,7 @@ for i in range(len(mat)) :
 	for j in range(len(mat)) :
 		bj = b_ids[j]
 		bj_t = bj.split('_')[1]
-		if (areInScope(bi_t,bj_t)) :
+		if (areInScope(bi_t,bj_t,bi,bj)) :
 			vector.append(mat[i][j])
 		else :
 			vector.append(0)
@@ -521,8 +539,7 @@ vectors = np.array(vectors)
 
 # 3) use PaCMAP to project the embedding on 2D visualization space
 
-# projector = pacmap.PaCMAP(n_components=2, n_neighbors=10, MN_ratio=0.5, FP_ratio=2) 
-projector = pacmap.PaCMAP(n_components=2, n_neighbors=1, MN_ratio=0.5, FP_ratio=2)
+projector = pacmap.PaCMAP(n_components=2, n_neighbors=10, MN_ratio=0.5, FP_ratio=2)
 projection_2D = projector.fit_transform(vectors, init="pca")
 
 xs = projection_2D[:, 0]

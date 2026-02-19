@@ -24,7 +24,7 @@ parser.add_argument('--level_of_mixing'
 				   , help='controls the level of node mixing between blocks, level ∈ [0,0.5[')
 parser.add_argument('--reserve'
 				   , type=bool
-				   , default=False
+				   , default=True
 				   , help='use a reserve R while mixing nodes between blocks to emulate newcomers in the environment, |R| = |V|')
 parser.add_argument('--level_of_mixing_with_reserve'
 				   , type=float
@@ -39,7 +39,7 @@ args = parser.parse_args()
 λ = args.level_of_mixing
 ψ = args.level_of_mixing_with_reserve
 nodes_labels = list(map(lambda v: "n" + str(v), range(0,args.nb_nodes)))
-nodes_labels_reserve = list(map(lambda v: "n" + str(v), range(args.nb_nodes,2*args.nb_nodes)))
+nodes_labels_reserve = list(map(lambda v: "n" + str(v), range(args.nb_nodes,5*args.nb_nodes)))
 blocks_labels = ["A","B","C","D"]
 mixing_constraints = {"A":"B","B":"A","C":"D","D":"C"}
 
@@ -72,7 +72,7 @@ def copyGraph(g_old,scenario,phase) :
 
 def saveGraph(g) :
 	label_str_to_int = {"A":1,"B":2,"C":3,"D":4}
-	g_new = gt.GraphView(g, vfilt=lambda v: g.vp.vblock[v] != "R")
+	g_new = gt.GraphView(g, vfilt=lambda v: g.vp.vblock[v] != "R" and g.vp.vblock[v] != "O")
 	g_new.vp["vgroup"] = g_new.new_vertex_property("int")
 	for v in g_new.vertices():
 		g_new.vp.vgroup[v] = label_str_to_int[g_new.vp.vblock[v]]
@@ -97,7 +97,7 @@ def switchNodesWithReserve(g,level) :
 		for v in g.vertices() :
 			if g.vp.vblock[v] in blocks_labels :
 				nodes_V.append(v)
-			else :
+			elif g.vp.vblock[v] == "R" :
 				nodes_R.append(v)
 		leaving_nodes_V = random.sample(nodes_V,int(abs(level*len(nodes_V))))
 		leaving_nodes_R = random.sample(nodes_R,int(abs(level*len(nodes_R))))
@@ -106,7 +106,7 @@ def switchNodesWithReserve(g,level) :
 			v = leaving_nodes_V[i]
 			r = leaving_nodes_R[i]
 			v_block = g.vp.vblock[v]
-			g.vp.vblock[v] = "R"
+			g.vp.vblock[v] = "O"
 			g.vp.vblock[r] = v_block
 	return g
 
@@ -281,7 +281,8 @@ saveGraph(g4)
 
 print("\n####")
 print("Scenario Ɛ")
-steps = [λ,λ,λ]
+steps = [0.2,0.2,0.2]
+ψ = 0.1
 
 ## phase 1
 
@@ -311,4 +312,43 @@ print("• t3 → t4")
 g4 = copyGraph(g3,"epsilon","t4")
 g4 = switchNodesWithReserve(g4,ψ)
 g4 = mixNodesBetweenGroups(g4,steps[2],True)
+saveGraph(g4)
+
+####
+## scenario ζ 
+####
+
+print("\n####")
+print("Scenario ζ")
+steps = [0.2,0.2,0.2]
+ψ = 0.6
+
+## phase 1
+
+print("• t1")
+g1 = initGraph("zeta","t1")
+saveGraph(g1)
+
+## phase 2
+
+print("• t1 → t2")
+g2 = copyGraph(g1,"zeta","t2")
+g2 = switchNodesWithReserve(g2,ψ)
+g2 = mixNodesBetweenGroups(g2,steps[0])
+saveGraph(g2)
+
+## phase 3
+
+print("• t2 → t3")
+g3 = copyGraph(g2,"zeta","t3")
+g3 = switchNodesWithReserve(g3,ψ)
+g3 = mixNodesBetweenGroups(g3,steps[1])
+saveGraph(g3)
+
+## phase 4
+
+print("• t3 → t4")
+g4 = copyGraph(g3,"zeta","t4")
+g4 = switchNodesWithReserve(g4,ψ)
+g4 = mixNodesBetweenGroups(g4,steps[2])
 saveGraph(g4)

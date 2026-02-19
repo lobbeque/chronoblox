@@ -122,7 +122,7 @@ class chronoSyncEdge {
   } 
 }
 
-function focusToColor(focused) {
+function focusToColor(focused,period) {
   let focused_color;
   switch (focused) {
     case 'node_period_step':  
@@ -130,7 +130,7 @@ function focusToColor(focused) {
     case 'node_neighbor_step':
     case 'node_over_step':
     case 'node_click_step':
-      focused_color = color('#938A79');
+      focused_color = d3.color(timeColorScale(timeScaleNormalized(period))).formatHex();
       break;          
     case 'sync_edge_period_step':
       focused_color = color('#938A79');
@@ -141,8 +141,9 @@ function focusToColor(focused) {
     case 'node_neighbor_focus':
     case 'node_over_focus':
     case 'node_click_focus':
-    case 'sync_edge_period_focus':
       focused_color = color("#FDEA24");
+    case 'sync_edge_period_focus':
+      focused_color = color((shader == "night") ? '#FDEA24' : '#333333');
       break;                
     case 'sync_edge_focus':
       focused_color = color("#5cc9f5");
@@ -206,7 +207,7 @@ class chronoNode {
       lastNodeOverNeighbors = [];
     }
 
-    let fill_color = focusToColor(focused)
+    let fill_color = focusToColor(focused,this.period)
     let zoom = 0
 
     if (displayMeta) {
@@ -217,11 +218,11 @@ class chronoNode {
     c.stroke("#333333");
     c.strokeWeight(1);
     if (focused == "node_period_focus") {
-      c.strokeWeight(3);
+      c.strokeWeight(2);
     }
 
     if (focused == "node_neighbor_step" || focused == "node_neighbor_focus") {
-      c.strokeWeight(3);
+      c.strokeWeight(2);
       c.stroke(taleColor[(taleClickCount - 1) % 2]);
       c.fill("#333333");
       c.circle(this.x ,this.y, this.w + zoom + 5);
@@ -229,7 +230,7 @@ class chronoNode {
     }
 
     if (focused == "node_click_focus" || focused == "node_click_step" || focused == "node_over_focus" || focused == "node_over_step") {
-      c.strokeWeight(3);
+      c.strokeWeight(2);
       if (event == "click") {
         c.stroke(taleColor[(taleClickCount - 1) % 2]);
       } else {

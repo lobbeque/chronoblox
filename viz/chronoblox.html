@@ -178,7 +178,7 @@
           <div class="btn-top">
             <!-- display metadata -->
             <button onclick="removeMeta()" class="button tooltip" id="btnmeta">
-              <i class="fa-solid fa-circle-question"></i>
+              <i class="fa-solid fa-palette"></i>
               <span class="tooltiptext" id="metalegend" ></span>
             </button>            
           </div>
@@ -224,7 +224,7 @@
     let chronoNodes = {}, chronoSyncEdges = [];
     let displayMeta = false;
     let displayEdges = true;
-    let xLimitsChrono, yLimitsChrono, xFlowScale;
+    let xLimitsChrono, yLimitsChrono, timeScale;
     let syncEdgesScale;
     let metaColorScale,metaColorScaleNight,metaColorScaleLight;
     let mixedMeta = "#fff1f1";
@@ -317,8 +317,8 @@
 
     function preload() {
       
-      nodes = loadTable('../layout/forward_unfiltered_lang_2019-11_sbm_blocks.csv','csv','header')
-      edges = loadTable('../layout/forward_unfiltered_lang_2019-11_sbm_edges.csv','csv','header')
+      nodes = loadTable('../layout/sociopatterns_louvain_blocks.csv','csv','header')
+      edges = loadTable('../layout/sociopatterns_louvain_edges.csv','csv','header')
       
       neuekabel = loadFont('fonts/NeueKabel.otf');
       neuekabelbold = loadFont('fonts/NeueKabel-Bold.otf');
@@ -360,7 +360,9 @@
 
       nodesScale = d3.scaleLinear(nodes_size_limits,[7, 25]);
       syncEdgesScale = d3.scaleLinear(sync_edges_limits,[0.5, 3]);
-      xFlowScale = d3.scaleBand(([-1].concat(periods)), [0, w])
+      timeScale = d3.scaleBand(([-1].concat(periods)), [0, w])
+      timeScaleNormalized = d3.scaleBand(([-1].concat(periods)), [0, 0.8])
+      timeColorScale = d3.scaleSequential(d3.interpolateYlOrBr)
 
       // prepare the elements to be drawn
 
@@ -414,7 +416,6 @@
           }
         })
 
-        let node_x = xFlowScale(period)
         let blocks_lineage = 0
         let possible_hulls = {}
 
@@ -500,16 +501,18 @@
       // draw the background
       canvas.background("#444444");
       periods.forEach((period) => {
+        let period_color = d3.color(timeColorScale(timeScaleNormalized(period))).formatHex()
         canvas.push()
-        canvas.fill("#FFFFFF")
+        canvas.fill(period_color)
         canvas.textAlign(CENTER)
-        canvas.textSize(14);
+        canvas.textSize(8);
         canvas.textFont(neuekabel);
         if (periods[focus] == period) {
           canvas.fill("#fdea24")
           canvas.textFont(neuekabelbold);
+          canvas.textSize(14);
         }
-        canvas.text(period,xFlowScale(period),height/2 + 5);
+        canvas.text(period,timeScale(period),height/2 + 5);
         canvas.pop()  
       })
     }   
@@ -553,7 +556,7 @@
       
       if (displayCanopy) {
         background_color = color(((shader == "night") ? '#222222' : '#eeeeee'));
-        background_color.setAlpha(130);
+        background_color.setAlpha(30);
         canvas[1].background(background_color);
         canopyHulls[periods[focus]].forEach((hull) => {
           hull.display(canvas[1])
