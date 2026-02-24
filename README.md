@@ -2,7 +2,7 @@
 
 Chronoblox is a system for visualizing the evolution of large-scale dynamic networks. Chronoblox first reduces the network size by way of nodes categorizations. It then generates a chronophotography of graph snapshots by embedding all temporal phases into a single, shared similarity space. This discrete time flattening layout allows users to perceive meso-to-macro structural changes at a glance. Chronoblox thus enables the formulation of well-grounded morphogenetic hypotheses based solely on visual evidence.
 
-**Ressources** : [layout](https://anonymous.4open.science/r/chronoblox-BE82/layout/chronoblox.py) | [interface](https://anonymous.4open.science/r/chronoblox-BE82/viz/chronoblox.html) | [examples](https://anonymous.4open.science/w/chronoblox_examples-716D/)
+**Ressources** : [layout](https://anonymous.4open.science/r/chronoblox-BE82/layout/chronoblox.py) | [interface](https://anonymous.4open.science/r/chronoblox-BE82/viz/chronoblox.html) | [examples](https://hnurl.fr/mi12sx)
 
 ## Chronoblox Layout
 
