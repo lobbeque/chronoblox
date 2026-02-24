@@ -187,7 +187,7 @@
         <div class="canvas" id="p5canvas"></div>    
       </div>
       <div class="footer">
-        <p>Cams (CNRS/EHESS) // <script>document.write(/\d{4}/.exec(Date())[0])</script></p>
+        <!-- <p>Cams (CNRS/EHESS) // <script>document.write(/\d{4}/.exec(Date())[0])</script></p> -->
       </div> 
     </main>
   </body>
@@ -226,11 +226,10 @@
     let displayEdges = true;
     let xLimitsChrono, yLimitsChrono, timeScale;
     let syncEdgesScale;
-    let metaColorScale,metaColorScaleNight,metaColorScaleLight;
+    let metaColorScale;
     let mixedMeta = "#fff1f1";
-    let nightPalette = ["#d81b60","#ffc107","#004d40","#1e88e5","#fa4d56","#6fdc8c","#d12771","#d2a106","#08bdba","#bae6ff","#ba4e00","#d4bbff"];
-    let lightPalette = ["#d81b60","#ffc107","#004d40","#1e88e5","#fa4d56","#198038","#ee538b","#b28600","#009d9a","#012749","#8a3800","#a56eff"];
-
+    let metaPalette = ["#8a3ffc","#33b1ff","#007d79","#ff7eb6","#fa4d56","#6fdc8c","#4589ff","#d12771","#d2a106","#08bdba","#bae6ff","#ba4e00","#d4bbff"]
+    
     // Tales
     const talesColorScale = d3.scaleOrdinal(d3.schemeSet3);
     let talesEdges = {}, talesNodes = {};
@@ -323,7 +322,7 @@
       neuekabel = loadFont('fonts/NeueKabel.otf');
       neuekabelbold = loadFont('fonts/NeueKabel-Bold.otf');
 
-      setShader("night")
+      setShader("light")
     }
     
     function setup() {
@@ -402,7 +401,7 @@
           let s = nodes.findRow(edge.get('source'),'id')
           let t = nodes.findRow(edge.get('target'),'id') 
           if (s != undefined && t != undefined && s != t) {
-            let tale = parseInt(edge.get('diac_component'))
+            let tale = parseFloat(edge.get('diac_component'))
             let diac_edge = new taleEdge(toXScreen(parseFloat(s.get('x')))
                                         ,toXScreen(parseFloat(t.get('x')))
                                         ,toYScreen(parseFloat(s.get('y')))
@@ -426,7 +425,7 @@
           let node_id = block.get('id')
           let node_weight = parseInt(block.get('size'));
           let node_meta = block.get('meta')
-          let tale = parseInt(block.get('diac_component'));
+          let tale = parseFloat(block.get('diac_component'));
           let node_label = block.get('label')
           chronoNodes[node_id] = new chronoNode(node_id,x_screen,y_screen,node_weight,tale,node_meta,node_label)
 
@@ -451,6 +450,7 @@
         // setup the canopy
         canopyHulls[period] = [] 
         let mergedHulls = mergeHulls(Object.values(possible_hulls))
+
         mergeHulls(Object.values(possible_hulls)).forEach((points) => {
           canopyHulls[period].push(new canopyHull(period,points))
         })
@@ -460,15 +460,15 @@
 
       })
 
+      console.log(talesNodes)
+
       // meta data
 
       let metalegend = document.getElementById("metalegend")
       let meta_domain = nodes.getColumn('meta')
       meta_domain = Array.from(new Set(meta_domain))
       meta_domain.sort(function (a,b) {return a-b;})
-      metaColorScaleNight = d3.scaleOrdinal(meta_domain,nightPalette)
-      metaColorScaleLight = d3.scaleOrdinal(meta_domain,lightPalette)
-      metaColorScale = metaColorScaleNight
+      metaColorScale =  d3.scaleOrdinal(meta_domain,metaPalette)
       meta_domain.forEach((meta) => {
         if (meta != "") {
           if (meta != "mixed") {
@@ -505,12 +505,12 @@
         canvas.push()
         canvas.fill(period_color)
         canvas.textAlign(CENTER)
-        canvas.textSize(8);
+        canvas.textSize(14);
         canvas.textFont(neuekabel);
         if (periods[focus] == period) {
           canvas.fill("#fdea24")
           canvas.textFont(neuekabelbold);
-          canvas.textSize(14);
+          canvas.textSize(15);
         }
         canvas.text(period,timeScale(period),height/2 + 5);
         canvas.pop()  

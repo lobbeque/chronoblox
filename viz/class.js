@@ -76,9 +76,9 @@ class chronoSyncEdge {
   }
 
   displayEdge(c,focused,event) {  
-    let zoom = ((focused == "sync_edge_period_focus") ? 1 : 0)
+    let zoom = ((focused == "sync_edge_period_focus") ? 3 : 0)
     if (focused == "sync_edge_focus") {
-      zoom += 1
+      zoom += 3
     }    
     c.push();
     if (event == "click") {
@@ -141,9 +141,9 @@ function focusToColor(focused,period) {
     case 'node_neighbor_focus':
     case 'node_over_focus':
     case 'node_click_focus':
-      focused_color = color("#FDEA24");
+      focused_color = color("#fdea24");
     case 'sync_edge_period_focus':
-      focused_color = color((shader == "night") ? '#FDEA24' : '#333333');
+      focused_color = color((shader == "night") ? '#fdea24' : '#333333');
       break;                
     case 'sync_edge_focus':
       focused_color = color("#5cc9f5");

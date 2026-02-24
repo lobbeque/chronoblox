@@ -119,8 +119,8 @@ function displayMouseOver(c) {
       target = edge.getTarget()
       if ((nodes_sources.includes(source) || nodes_sources.includes(edge.getTarget()))
           && (nodes_targets.includes(source) || nodes_targets.includes(edge.getTarget()))) {
-        edge.displayStroke(c,"sync_edge_focus","over")
-        edge.displayEdge(c,"sync_edge_focus","over")
+        //edge.displayStroke(c,"sync_edge_focus","over")
+        //edge.displayEdge(c,"sync_edge_focus","over")
         if (nodes_sources.includes(source)) {
           sync_nodes_sources.push(source)
         }
@@ -189,9 +189,12 @@ function displayMouseClick(c) {
   // 1 : display the diachronic edges
   let taleId = node_click.getTale();
   let period = node_click.getPeriod()
-  talesEdges[taleId].forEach((diac_edge) => {
-    diac_edge.displayEdge(c,"click")
-  })
+  if (taleId > -1) {
+    talesEdges[taleId].forEach((diac_edge) => {
+      diac_edge.displayEdge(c,"click")
+    })    
+  }
+  
 
   // 2 : display the diachronic nodes
   talesNodes[taleId].forEach((id) => {
