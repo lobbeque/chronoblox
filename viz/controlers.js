@@ -11,12 +11,10 @@ function setShader(mode) {
     case 'night':
       btn_night.classList.add('button-clicked');
       btn_day.classList.remove('button-clicked');
-      metaColorScale = metaColorScaleNight;
       break;
     case 'day':
       btn_night.classList.remove('button-clicked');
       btn_day.classList.add('button-clicked');
-      metaColorScale = metaColorScaleLight;
       break;
   } 
 }
